@@ -6,10 +6,34 @@ Status: **PHYSICS PASS / CONTROL FAIL / OVERALL FAIL**
 
 PR: **DRAFT / DO NOT MERGE**
 
-This round does not retune the hierarchical planner, demo seed, beam
-width, or `TERMINAL_ENTRY_DEG`. Train-10 and hidden were not run.
+This round stops handwritten planner patches. It adds a labeled
+offline dataset and an auditable k-NN capture-cost V used as the
+guidance / beam terminal heuristic. Beam width, physics, and the demo
+seed are unchanged. Train-10, train-50, and hidden were not run.
 
-## Offline capture reachability (this round)
+## Offline dataset + capture-value (this round)
+
+Artifacts: `outputs/reachability-dataset.json`, `src/sim/control/data/capture-value-knn.json`.
+
+400 public states from a seed-free sampler (log-att 1.2–35°, closing /
+rest / opening, optional one-jet isolation, optional pending pulse).
+Each state is labeled by a budgeted high-fid search (8 s, eigen+beam):
+
+| Label | Meaning | Count |
+|---|---|---|
+| `captured` | committed trajectory met att<1° AND \|ω\|<0.008 AND fuel>2.8 | **78** |
+| `search_unreached` | no sequence inside the budget — **not a proof** | **322** |
+| `proven_infeasible` | no torque and near-zero rate with att≥1° | **0** |
+
+Train/val split by id hash: 323 / 77. k-NN (k=7) val MAE ≈ 18.6 cost
+units — usable as a ranking heuristic, not a calibrated time predictor.
+
+Online: lexicographic beam and guidance rank by V after fuel/hard
+gates. Terminal phase still the short high-fid search. Handoff is
+`V < 6` or att≤8, not “inside the 12° ball”. `TERMINAL_ENTRY_DEG`
+stays 12 as a published constant.
+
+## Previous offline 20-state study
 
 Artifact: `outputs/capture-reachability-study.json`.
 
