@@ -11,3 +11,4 @@ export * from "./terminal-planner";
 export * from "./terminal-reachable";
 export * from "./guidance-planner";
 export * from "./controller-v2";
+export * from "./capture-reachability";
