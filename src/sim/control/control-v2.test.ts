@@ -8,6 +8,7 @@ import { runRolloutTests } from "./rollout-model.test";
 import { runRolloutErrorTests } from "./rollout-error.test";
 import { runTerminalReachableTests } from "./terminal-reachable.test";
 import { runHierarchicalTests } from "./hierarchical.test";
+import { runCaptureReachabilityTests } from "./capture-reachability.test";
 
 interface T {
   name: string;
@@ -36,6 +37,7 @@ export function runControlV2Tests(): T[] {
   out.push(...runTerminalReachableTests());
   out.push(...runHierarchicalTests());
   out.push(...runBeamPlannerTests());
+  out.push(...runCaptureReachabilityTests());
 
   const plant = defaultPublicConfig({ duration: 0.8 });
   const v2 = createFlightController(plant, { mode: "discrete-pulse-v2" });

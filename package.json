@@ -26,6 +26,7 @@
     "eval:smoke": "npx tsx src/sim/cli/run-eval.ts --controller baseline --set train --count 2 --out outputs/eval-smoke.json",
     "eval:rollout-error": "npx tsx src/sim/cli/run-rollout-error.ts",
     "eval:traces": "npx tsx src/sim/cli/run-failure-traces.ts",
+    "eval:capture-reachability": "npx tsx src/sim/cli/run-capture-reachability.ts",
     "optimize": "npx tsx src/sim/cli/run-optimize.ts",
     "benchmark": "npx tsx src/sim/cli/run-benchmark.ts",
     "lint": "eslint .",
