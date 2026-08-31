@@ -23,6 +23,7 @@
     "score": "npx tsx src/sim/cli/run-score.ts",
     "test:physics": "npx tsx src/sim/cli/run-physics.ts",
     "eval": "npx tsx src/sim/cli/run-eval.ts",
+    "eval:smoke": "npx tsx src/sim/cli/run-eval.ts --controller baseline --set train --count 2 --out outputs/eval-smoke.json",
     "optimize": "npx tsx src/sim/cli/run-optimize.ts",
     "benchmark": "npx tsx src/sim/cli/run-benchmark.ts",
     "lint": "eslint .",
