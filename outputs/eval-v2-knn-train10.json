@@ -1,0 +1,182 @@
+{
+  "commitSha": "f5c48d396998556b2a4392cd2753f48be63bfc27",
+  "branch": "control/discrete-pulse-planner-v2",
+  "controllerVersion": "discrete-pulse-v2-knn",
+  "physicsBaselineSha": "bdfff5b4c62733d7156d2f9cdeeaa75661d6c9f4",
+  "set": "train",
+  "count": 10,
+  "rates": {
+    "allGates": 0.0,
+    "attitude": 0.0,
+    "rate": 0.3,
+    "fuel": 1.0,
+    "param": 0.2,
+    "fdir": 1.0
+  },
+  "stats": {
+    "att": {
+      "median": 49.96,
+      "p90": 102.85942587669803,
+      "worst": 117.50999902619412,
+      "best": 22.16
+    },
+    "fuel": {
+      "median": 2.911,
+      "p90": 3.235,
+      "worst": 3.248,
+      "best": 2.805
+    },
+    "omega": {
+      "median": 0.0337,
+      "p90": 0.0711408810426962,
+      "worst": 0.0749,
+      "best": 0.0048
+    }
+  },
+  "targets": {
+    "allGates": 0.8,
+    "attitude": 0.9,
+    "fuel": 0.9,
+    "fdir": 0.95,
+    "param": 0.8
+  },
+  "pass": {
+    "allGates": false,
+    "attitude": false,
+    "fuel": true,
+    "fdir": true,
+    "param": false
+  },
+  "rows": [
+    {
+      "seed": 800000,
+      "att": 90.24,
+      "w": 0.0697,
+      "fuel": 2.961,
+      "param": 0.185,
+      "fdir": 1,
+      "allGates": false,
+      "knnQueryCount": 828315,
+      "oodFallbackCount": 815708,
+      "meanNnDist": null,
+      "meanCaptureCost": null
+    },
+    {
+      "seed": 800017,
+      "att": 49.96,
+      "w": 0.0698,
+      "fuel": 2.915,
+      "param": 0.226,
+      "fdir": 1,
+      "allGates": false,
+      "knnQueryCount": 813510,
+      "oodFallbackCount": 807213,
+      "meanNnDist": null,
+      "meanCaptureCost": null
+    },
+    {
+      "seed": 800034,
+      "att": 66.2,
+      "w": 0.0048,
+      "fuel": 3.248,
+      "param": 0.178,
+      "fdir": 1,
+      "allGates": false,
+      "knnQueryCount": 878496,
+      "oodFallbackCount": 878496,
+      "meanNnDist": null,
+      "meanCaptureCost": null
+    },
+    {
+      "seed": 800051,
+      "att": 86.33,
+      "w": 0.0337,
+      "fuel": 2.805,
+      "param": 0.303,
+      "fdir": 1,
+      "allGates": false,
+      "knnQueryCount": 738717,
+      "oodFallbackCount": 734513,
+      "meanNnDist": null,
+      "meanCaptureCost": null
+    },
+    {
+      "seed": 800068,
+      "att": 28.96,
+      "w": 0.0749,
+      "fuel": 2.928,
+      "param": 0.212,
+      "fdir": 1,
+      "allGates": false,
+      "knnQueryCount": 802371,
+      "oodFallbackCount": 791194,
+      "meanNnDist": null,
+      "meanCaptureCost": null
+    },
+    {
+      "seed": 800085,
+      "att": 45.51,
+      "w": 0.022,
+      "fuel": 3.235,
+      "param": 0.181,
+      "fdir": 1,
+      "allGates": false,
+      "knnQueryCount": 689028,
+      "oodFallbackCount": 558110,
+      "meanNnDist": null,
+      "meanCaptureCost": null
+    },
+    {
+      "seed": 800102,
+      "att": 22.16,
+      "w": 0.0063,
+      "fuel": 2.877,
+      "param": 0.153,
+      "fdir": 1,
+      "allGates": false,
+      "knnQueryCount": 535414,
+      "oodFallbackCount": 505771,
+      "meanNnDist": null,
+      "meanCaptureCost": null
+    },
+    {
+      "seed": 800119,
+      "att": 42.54,
+      "w": 0.0052,
+      "fuel": 2.911,
+      "param": 0.123,
+      "fdir": 1,
+      "allGates": false,
+      "knnQueryCount": 886477,
+      "oodFallbackCount": 737419,
+      "meanNnDist": null,
+      "meanCaptureCost": null
+    },
+    {
+      "seed": 800136,
+      "att": 102.85942587669803,
+      "w": 0.0711408810426962,
+      "fuel": 2.905401761919243,
+      "param": 0.216600081261272,
+      "fdir": 1,
+      "allGates": false,
+      "knnQueryCount": 853895,
+      "oodFallbackCount": 853895,
+      "meanNnDist": 4.742888815593839,
+      "meanCaptureCost": 38.016914231457235
+    },
+    {
+      "seed": 800153,
+      "att": 117.50999902619412,
+      "w": 0.070303596594281,
+      "fuel": 2.8171539508654373,
+      "param": 0.12725493031851082,
+      "fdir": 1,
+      "allGates": false,
+      "knnQueryCount": 685232,
+      "oodFallbackCount": 684751,
+      "meanNnDist": 2.969917212124721,
+      "meanCaptureCost": 25.472314152615166
+    }
+  ]
+}

@@ -24,6 +24,7 @@ function baseScore(over: Partial<LexicographicScore> = {}): LexicographicScore {
     terminalAttitudeGateFailure: 0,
     sliderRisk: 0,
     sloshRisk: 0,
+    captureCost: 0,
     attRad: 0.2,
     omega: 0.02,
     perpMomentum: 0.01,

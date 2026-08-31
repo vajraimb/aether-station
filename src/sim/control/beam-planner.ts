@@ -57,6 +57,8 @@ export interface BeamPlannerConfig {
   fuelFloorKg: number;
   fuelReserveKg: number;
   rollout: RolloutConfig;
+  /** Default knn. Pass 'att' to restore pre-value lexicographic ranking. */
+  valueSource?: "knn" | "att";
 }
 
 export const DEFAULT_BEAM_CONFIG: BeamPlannerConfig = {
@@ -286,7 +288,7 @@ export function planBeam(
     plant,
     k12: params.k12Estimate,
     scoreTimeIsTerminal: false,
-    captureCostOf: (s) => knnCaptureCost(s, params.failedThrusterBeliefs, plant),
+    captureCostOf: cfg.valueSource === "att" ? undefined : (s) => knnCaptureCost(s, params.failedThrusterBeliefs, plant),
   };
   const coast = generatePulsePrimitives(THRUSTERS, {
     isolatedThrusters: isolated,

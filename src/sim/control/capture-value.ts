@@ -48,6 +48,39 @@ export interface ValueQuery {
   capturedProb: number;
 }
 
+export interface CaptureValueStats {
+  queryCount: number;
+  oodCount: number;
+  meanNnDist: number;
+  distSum: number;
+}
+
+let STATS: CaptureValueStats = { queryCount: 0, oodCount: 0, meanNnDist: 0, distSum: 0 };
+
+export function resetCaptureValueStats(): void {
+  STATS = { queryCount: 0, oodCount: 0, meanNnDist: 0, distSum: 0 };
+}
+
+export function getCaptureValueStats(): CaptureValueStats {
+  return {
+    queryCount: STATS.queryCount,
+    oodCount: STATS.oodCount,
+    meanNnDist: STATS.queryCount > 0 ? STATS.distSum / STATS.queryCount : 0,
+    distSum: STATS.distSum,
+  };
+}
+
+function noteQuery(q: ValueQuery): void {
+  STATS.queryCount += 1;
+  STATS.oodCount += q.ood ? 1 : 0;
+  if (Number.isFinite(q.nnDist)) STATS.distSum += q.nnDist;
+}
+
+function noteAndReturn(q: ValueQuery): ValueQuery {
+  noteQuery(q);
+  return q;
+}
+
 const DEFAULT_SCALE = [0.4, 0.04, 0.02, 0.08, 1.2, 2, 1, 1.2];
 
 export function dist2(a: FeatureVector, b: FeatureVector, scale: number[]): number {
@@ -142,7 +175,7 @@ export function heuristicCost(x: FeatureVector): number {
 
 export function queryTable(table: KnnTable, x: FeatureVector): ValueQuery {
   if (table.neighbors.length === 0) {
-    return {
+    return noteAndReturn({
       cost: heuristicCost(x),
       label: "heuristic",
       firstPrimitiveId: null,
@@ -150,14 +183,14 @@ export function queryTable(table: KnnTable, x: FeatureVector): ValueQuery {
       nnDist: Infinity,
       ood: true,
       capturedProb: 0,
-    };
+    });
   }
   const scored = table.neighbors.map((nb, i) => ({ i, d: dist2(x, nb.x, table.scale) }));
   scored.sort((a, b) => a.d - b.d || a.i - b.i);
   const nnDist = Math.sqrt(scored[0]!.d);
   const ood = nnDist > (table.oodThreshold || Infinity);
   if (ood) {
-    return {
+    return noteAndReturn({
       cost: heuristicCost(x),
       label: "heuristic",
       firstPrimitiveId: null,
@@ -165,7 +198,7 @@ export function queryTable(table: KnnTable, x: FeatureVector): ValueQuery {
       nnDist,
       ood: true,
       capturedProb: 0,
-    };
+    });
   }
   const take = scored.slice(0, Math.min(table.k, scored.length));
   let wsum = 0;
@@ -190,7 +223,7 @@ export function queryTable(table: KnnTable, x: FeatureVector): ValueQuery {
       label = k as CaptureLabel;
     }
   }
-  return {
+  return noteAndReturn({
     cost: csum / Math.max(wsum, 1e-12),
     label,
     firstPrimitiveId: bestFirst,
@@ -198,7 +231,7 @@ export function queryTable(table: KnnTable, x: FeatureVector): ValueQuery {
     nnDist,
     ood: false,
     capturedProb: capW / Math.max(wsum, 1e-12),
-  };
+  });
 }
 
 let ACTIVE: KnnTable = {
@@ -232,9 +265,12 @@ export function getCaptureValueTable(): KnnTable {
   return ACTIVE;
 }
 
+export function queryCaptureValue(state: RolloutState, isolated: readonly number[], plant: PublicConfig): ValueQuery {
+  return queryTable(ACTIVE, captureFeatures(state, isolated, plant));
+}
+
 export function captureCost(state: RolloutState, isolated: readonly number[], plant: PublicConfig): number {
-  const x = captureFeatures(state, isolated, plant);
-  return queryTable(ACTIVE, x).cost;
+  return queryCaptureValue(state, isolated, plant).cost;
 }
 
 export { FEATURE_NAMES };

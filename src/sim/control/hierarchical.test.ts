@@ -95,5 +95,17 @@ export function runHierarchicalTests(): T[] {
   }
 
   void vnorm;
+  {
+    const v2 = createFlightController(plant, { mode: "discrete-pulse-v2", plannerFamily: "original-v2" }) as DiscretePulseV2Controller;
+    v2.step(obsAt(qnormalize([0.9998, 0.017, 0, 0]), [0.004, 0, 0], 0.1));
+    const d = v2.diagnostics();
+    check(
+      "test_original_v2_has_no_terminal_phase",
+      d.plannerPhase === "guidance" || d.plannerPhase === "fallback",
+      `phase=${d.plannerPhase}`,
+      out,
+    );
+  }
+
   return out;
 }

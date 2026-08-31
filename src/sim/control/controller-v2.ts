@@ -32,13 +32,14 @@ import type {
   ControlCommand,
   ControllerDiagnostics,
   FlightController,
+  PlannerFamily,
   PlannerPhase,
   PublicControllerConfig,
 } from "./interface";
 import { applyPrimitiveUntilComplete, rolloutFromSimLike, type RolloutParameters, type RolloutState } from "./rollout-model";
 import { basinFlags, eigenComponents, TERMINAL_ENTRY_DEG } from "./terminal-reachable";
 import { planTerminal } from "./terminal-planner";
-import { captureCost as knnCaptureCost } from "./capture-value";
+import { queryCaptureValue, type ValueQuery } from "./capture-value";
 
 const DETUMBLE_SAFE = 0.12;
 
@@ -57,6 +58,15 @@ export interface PlannerTraceSample {
   plannerPhase: PlannerPhase;
   terminalReachable: boolean;
   fdirMask: readonly number[];
+}
+
+export interface PlannerChoiceSample {
+  t: number;
+  primitiveId: string;
+  phase: PlannerPhase;
+  captureCost: number | null;
+  ood: boolean | null;
+  nnDist: number | null;
 }
 
 export class DiscretePulseV2Controller implements FlightController, PlantFlightController {
@@ -78,6 +88,8 @@ export class DiscretePulseV2Controller implements FlightController, PlantFlightC
   private lastReplanT = -1e9;
   private lastPhase: PlannerPhase = "guidance";
   private lastReachable = false;
+  private choiceLog: PlannerChoiceSample[] = [];
+  private lastValueQuery: ValueQuery | null = null;
   private traceSink: ((sample: PlannerTraceSample) => void) | null = null;
   private pendingPrediction: {
     t: number;
@@ -99,6 +111,8 @@ export class DiscretePulseV2Controller implements FlightController, PlantFlightC
     this.lastReplanT = -1e9;
     this.lastPhase = "guidance";
     this.lastReachable = false;
+    this.choiceLog = [];
+    this.lastValueQuery = null;
     this.pendingPrediction = null;
   }
 
@@ -205,6 +219,7 @@ export class DiscretePulseV2Controller implements FlightController, PlantFlightC
       horizonS: this.flightCfg.planningHorizonS,
       beamWidth: this.flightCfg.beamWidth,
       fuelFloorKg: this.flightCfg.fuelFloorKg,
+      valueSource: (this.flightCfg.plannerFamily ?? "knn-value") === "knn-value" ? "knn" : "att",
     };
 
     const attDeg = deg(attitudeErrorAngle(qnormalize(est.q), this.plant.qTarget));
@@ -250,9 +265,16 @@ export class DiscretePulseV2Controller implements FlightController, PlantFlightC
     }
 
     const flags = basinFlags(state, this.plant, TERMINAL_ENTRY_DEG, this.flightCfg.fuelFloorKg);
-    const vCost = knnCaptureCost(state, isolated, this.plant);
-    // Handoff is capture-cost, not a 12° attitude ball. Keep att<=8 as a safety net.
-    const useTerminal = vCost < 6 || flags.inBasin || attDeg <= 8;
+    const family: PlannerFamily = this.flightCfg.plannerFamily ?? "knn-value";
+    const valueSource = family === "knn-value" ? "knn" : "att";
+    this.lastValueQuery = family === "knn-value" ? queryCaptureValue(state, isolated, this.plant) : null;
+    const vCost = this.lastValueQuery?.cost ?? null;
+    const useTerminal =
+      family === "original-v2"
+        ? false
+        : family === "hierarchical"
+          ? flags.inBasin || attDeg <= TERMINAL_ENTRY_DEG
+          : (vCost !== null && vCost < 6) || flags.inBasin || attDeg <= 8;
     this.lastPhase = useTerminal ? "terminal" : "guidance";
     this.lastReachable = attDeg < 1 && wmag < 0.008 && est.fuel > this.flightCfg.fuelFloorKg;
 
@@ -276,28 +298,35 @@ export class DiscretePulseV2Controller implements FlightController, PlantFlightC
           reason: result.reason,
         };
         this.notePrediction(state, params, result.primitive);
+        this.noteChoice(t, result.primitive.id);
         if (result.primitive.thrusterIds.some((id) => this.fdir.isolated.has(id))) {
           this.fallbackCount += 1;
           this.lastPhase = "fallback";
-          return this.coastPrimitive();
+          const coast = this.coastPrimitive();
+          this.noteChoice(t, coast.id);
+          return coast;
         }
         return result.primitive;
       }
       const guidedCfg: BeamPlannerConfig = {
         ...DEFAULT_BEAM_CONFIG,
-        horizonS: 5,
+        horizonS: family === "original-v2" ? this.flightCfg.planningHorizonS : 5,
         beamWidth: this.flightCfg.beamWidth,
         expansionBudget: DEFAULT_BEAM_CONFIG.expansionBudget,
         fuelFloorKg: this.flightCfg.fuelFloorKg,
+        valueSource,
       };
       const beam = planBeam(state, params, this.plant, guidedCfg);
       this.expandedNodes += beam.diagnostics.expandedNodes;
       this.lastDiag = { ...beam.diagnostics, reason: beam.diagnostics.reason === "beam" ? "guidance-beam" : beam.diagnostics.reason };
       this.notePrediction(state, params, beam.primitive);
+      this.noteChoice(t, beam.primitive.id);
       if (beam.primitive.thrusterIds.some((id) => this.fdir.isolated.has(id))) {
         this.fallbackCount += 1;
         this.lastPhase = "fallback";
-        return this.coastPrimitive();
+        const coast = this.coastPrimitive();
+        this.noteChoice(t, coast.id);
+        return coast;
       }
       return beam.primitive;
     } catch {
@@ -316,6 +345,27 @@ export class DiscretePulseV2Controller implements FlightController, PlantFlightC
 
   private replanHoldS(): number {
     return this.lastPhase === "terminal" ? 0.24 : this.flightCfg.replanPeriodS;
+  }
+
+  private noteChoice(t: number, primitiveId: string): void {
+    const last = this.choiceLog[this.choiceLog.length - 1];
+    if (last && Math.abs(last.t - t) < 1e-9) {
+      last.primitiveId = primitiveId;
+      last.phase = this.lastPhase;
+      return;
+    }
+    this.choiceLog.push({
+      t,
+      primitiveId,
+      phase: this.lastPhase,
+      captureCost: this.lastValueQuery?.cost ?? null,
+      ood: this.lastValueQuery?.ood ?? null,
+      nnDist: this.lastValueQuery?.nnDist ?? null,
+    });
+  }
+
+  getChoiceLog(): readonly PlannerChoiceSample[] {
+    return this.choiceLog;
   }
 
   private notePrediction(state: RolloutState, params: RolloutParameters, primitive: PulsePrimitive): void {

@@ -5,7 +5,7 @@
  *   search_unreached   — budgeted search did not find a sequence
  *   proven_infeasible  — a conservative certificate (no torque and no rate)
  */
-import { attitudeErrorAngle, attitudeErrorVector, qnormalize, vdot, vnorm, vscale, vsub } from "../math3d";
+import { attitudeErrorAngle, attitudeErrorVector, qnormalize, vdot, vnorm, vscale, vsub, type Vec3 } from "../math3d";
 import type { PublicConfig } from "../types";
 import { capturedGates } from "./capture-reachability";
 import type { RolloutState } from "./rollout-model";
@@ -31,7 +31,7 @@ export function captureFeatures(state: RolloutState, isolated: readonly number[]
   const attRad = attitudeErrorAngle(q, plant.qTarget);
   const err = attitudeErrorVector(q, plant.qTarget);
   const n = vnorm(err);
-  const eN = n > 1e-9 ? vscale(err, 1 / n) : ([1, 0, 0] as const);
+  const eN: Vec3 = n > 1e-9 ? vscale(err, 1 / n) : [1, 0, 0];
   const wPar = vdot(state.omegaB, eN);
   const wPerp = vnorm(vsub(state.omegaB, vscale(eN, wPar)));
   return [

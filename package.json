@@ -27,7 +27,7 @@
     "eval:rollout-error": "npx tsx src/sim/cli/run-rollout-error.ts",
     "eval:traces": "npx tsx src/sim/cli/run-failure-traces.ts",
     "eval:capture-reachability": "npx tsx src/sim/cli/run-capture-reachability.ts",
-    "eval:reachability-dataset": "npx tsx src/sim/cli/run-reachability-dataset.ts",
+    "eval:ablation-train10": "npx tsx src/sim/cli/run-ablation-train10.ts",
     "optimize": "npx tsx src/sim/cli/run-optimize.ts",
     "benchmark": "npx tsx src/sim/cli/run-benchmark.ts",
     "lint": "eslint .",

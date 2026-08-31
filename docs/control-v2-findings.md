@@ -2,18 +2,46 @@
 
 Physics baseline: `bdfff5b4c62733d7156d2f9cdeeaa75661d6c9f4`
 
-Status: **PHYSICS PASS / CONTROL FAIL / OVERALL FAIL**
+Status: **PHYSICS PASS / CAPTURE-VALUE VALIDATION PASS / ONLINE CONTROL UNPROVEN (0/10) / STOP kNN-VALUE LINE / OVERALL FAIL**
 
 PR: **DRAFT / DO NOT MERGE**
 
-This round stops handwritten planner patches. It adds a labeled
-offline dataset and an auditable k-NN capture-cost V used as the
-guidance / beam terminal heuristic. Beam width, physics, and the demo
-seed are unchanged. Train-10, train-50, and hidden were not run.
+Train-50 and hidden were not run. Beam width, physics kernel, and the demo seed are unchanged.
 
-## Offline dataset + capture-value (this round)
+## This round: train-10 ablation of the value heuristic
 
-Artifacts: `outputs/reachability-dataset.json`, `src/sim/control/data/capture-value-knn.json`.
+Artifact: `outputs/eval-ablation-train10.json` (also `outputs/eval-v2-knn-train10.json`).
+
+`npm run check` passed. `npm run test:physics -- --full` **175/175**.
+
+Four families on the public train-10 seeds (beam width 28):
+
+| Controller | att | rate | fuel | param | FDIR | all |
+|---|---|---|---|---|---|---|
+| baseline | 10% | 80% | 100% | 30% | 100% | 0% |
+| original V2 (8 s beam, no terminal, attRad score) | 0% | 80% | 100% | 50% | 100% | 0% |
+| hierarchical V2 (12° basin, attRad score) | 0% | 0% | 90% | 10% | 100% | 0% |
+| kNN-value V2 (V<6 handoff) | **0%** | 30% | **100%** | 20% | **100%** | **0%** |
+
+kNN-value best att **22.2°**. Stage-one gates fail (need att ≥ 60% and all-gates > 0). **Stop this algorithm line.**
+
+Offline labels still discriminate (val PR-AUC 0.86 / ROC-AUC 0.93), but the online kNN is not used as a value function in practice:
+
+- 7.71e6 kNN queries on train-10
+- **95.5% OOD** → eigen heuristic fallback
+- mean NN distance on the two instrumented tail seeds is ~3–5 vs OOD threshold 0.51
+
+So the failure is estimator-to-dataset mismatch / action proposal / short-horizon execution, not “the offline labels have no signal”.
+
+## Previous: grouped-split capture-value (still valid offline)
+
+Artifacts: `outputs/reachability-dataset.json`, `outputs/capture-value-validation.json`, `src/sim/control/data/capture-value-knn.v1.json`.
+
+400 public states in 80 families × 5 steps. Family split 60/20 groups (300/100). Val captured-class: PR-AUC 0.863, ROC-AUC 0.932, F1 0.780. Isolated-mask recall 0.46 vs healthy 1.00.
+
+3-seed smoke before train-10: att 0/3, fuel 3/3, FDIR 3/3.
+
+## Previous id-hash dataset (superseded)
 
 400 public states from a seed-free sampler (log-att 1.2–35°, closing /
 rest / opening, optional one-jet isolation, optional pending pulse).
