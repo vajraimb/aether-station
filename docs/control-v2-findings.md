@@ -2,6 +2,13 @@
 
 Physics baseline: `bdfff5b4c62733d7156d2f9cdeeaa75661d6c9f4`
 
+Current branch HEAD at the start of the hierarchical-capture round:
+`80e2be5d17b8c4745780ca568b1b9636426be5c7`
+
+The previous findings snapshot named `f37f8b45b6bf41c71c5782cdcb47dd7beeeaaae5`.
+That commit is **not** the current HEAD. `80e2be5d` only added
+`outputs/eval-v2-smoke.json` and does **not** change control logic.
+
 Status: **PHYSICS PASS / CONTROL FAIL / OVERALL FAIL**
 
 Stage-one train-10 was not met, so train-50 and hidden were not run.
@@ -20,7 +27,7 @@ Stage-one train-10 was not met, so train-50 and hidden were not run.
 
 - **late / missing terminal capture** (800000, 800102, 800119, 800034, 800051, 800085, 800136, 800153): attitude 2.5–14° with rate often already under 0.008. Beam coasts after the predicted geodesic looks “good enough” over an 8 s horizon that cannot finish a 1° hold.
 - **perpendicular momentum / wrong-way slew** (800017, 800068): terminal attitude 80–100°. Pair pulses that score well on the reduced model inject ω_perp in the plant. Isolation is still correct.
-- **planner–plant mismatch**: parity is tight for 0.5–2 s open-loop (see `outputs/rollout-parity.json`); 8–15 s closed-loop search still uses the fast rigid step, so delay + CM motion + slosh accumulate.
+- **planner–plant mismatch**: parity is tight for 0.5–2 s open-loop (see `outputs/rollout-parity.json`); 8–15 s closed-loop search still uses the fast rigid step, so delay + CM motion + slosh accumulate. A 5 s reduced-rollout attitude error of ~0.028 rad (~1.6°) already exceeds the 1° terminal gate, so the reduced model cannot own sub-degree capture.
 - **quantization / expansion budget**: 2800 deterministic expansions, 0.32–0.4 s primitives. Near 1° the 40 ms grid is fine; the miss is earlier, during eigenaxis tracking.
 - **parameter estimation**: 50% of seeds meet the 0.15 relative-error gate (baseline 30%). Failures still sit on RLS bounds for c1/c2/k12; excitation is FDIR-driven, not information-optimal. No seed-specific patches.
 

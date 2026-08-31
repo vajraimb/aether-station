@@ -6,6 +6,7 @@
 - Physics kernel, actuator constraints, scoring gates, and UI are frozen.
 - Existing observation-only controller remains the baseline (`mode=baseline`).
 - V2 discrete pulse planner is selected with `mode=discrete-pulse-v2`.
+- Branch HEAD at the start of the hierarchical-capture round: `80e2be5d17b8c4745780ca568b1b9636426be5c7` (`f37f8b45` is not HEAD; `80e2be5d` is a smoke-artifact-only commit).
 - Overall benchmark status remains **PHYSICS PASS / CONTROL FAIL / OVERALL FAIL**.
 - Train-10 stage-one attitude gate (60%) was not met. Train-50 and hidden were not run.
 
