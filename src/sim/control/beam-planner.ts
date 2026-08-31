@@ -27,6 +27,7 @@ import {
   type LexicographicScore,
   type ScoreContext,
 } from "./lexicographic-cost";
+import { captureCost as knnCaptureCost } from "./capture-value";
 import {
   applyPrimitive,
   cloneRolloutState,
@@ -285,6 +286,7 @@ export function planBeam(
     plant,
     k12: params.k12Estimate,
     scoreTimeIsTerminal: false,
+    captureCostOf: (s) => knnCaptureCost(s, params.failedThrusterBeliefs, plant),
   };
   const coast = generatePulsePrimitives(THRUSTERS, {
     isolatedThrusters: isolated,

@@ -207,6 +207,7 @@ export interface SequenceReport {
   nPulses: number;
   expanded: number;
   elapsedMs: number;
+  firstPrimitiveId: string | null;
   note: string;
 }
 
@@ -368,6 +369,7 @@ export function searchState(
   let expanded = 0;
   let nPulses = 0;
   let usedPair = false;
+  let firstPrimitiveId: string | null = null;
   let passedAttBall = false;
   let attBallTimeS: number | null = null;
   let captureTimeS: number | null = null;
@@ -396,6 +398,7 @@ export function searchState(
   while (state.time + 1e-9 < tEnd && !captured && expanded < expansionBudget * 40) {
     const { prim, expanded: e } = choosePrimitive(state, params, plant, opts, nPulses);
     expanded += e;
+    if (firstPrimitiveId == null) firstPrimitiveId = prim.id;
     if (prim.thrusterIds.length > 0) nPulses += 1;
     if (prim.thrusterIds.length === 2) usedPair = true;
     const remaining = tEnd - state.time;
@@ -435,6 +438,7 @@ export function searchState(
     nPulses,
     expanded,
     elapsedMs: Date.now() - t0,
+    firstPrimitiveId,
     note: captured
       ? "conjunctive-capture"
       : passedAttBall

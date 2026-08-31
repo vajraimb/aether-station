@@ -38,6 +38,7 @@ import {
 } from "./rollout-model";
 import { basinFlags, TERMINAL_ENTRY_DEG } from "./terminal-reachable";
 import { TERMINAL_FUEL_GATE } from "./terminal-planner";
+import { captureCost as knnCaptureCost } from "./capture-value";
 
 export const GUIDANCE_HORIZON_S = 4;
 
@@ -76,6 +77,7 @@ export interface GuidancePlanResult {
 interface GuidanceScore {
   hard: number;
   fuelBelow: number;
+  captureCost: number;
   wrongWay: number;
   basinMiss: number;
   perpExcess: number;
@@ -90,6 +92,7 @@ interface GuidanceScore {
 function compareGuidance(a: GuidanceScore, b: GuidanceScore): number {
   if (a.hard !== b.hard) return a.hard - b.hard;
   if (a.fuelBelow !== b.fuelBelow) return a.fuelBelow - b.fuelBelow;
+  if (Math.abs(a.captureCost - b.captureCost) > 1e-6) return a.captureCost - b.captureCost;
   const tumbleA = a.omega > 0.05 ? 1 : 0;
   const tumbleB = b.omega > 0.05 ? 1 : 0;
   if (tumbleA || tumbleB) {
@@ -121,6 +124,7 @@ function scoreGuidance(
   extras: { fuelUsed: number; switches: number; hard: number },
   entryDeg: number,
   fuelFloor: number,
+  paramsIsolated: readonly number[],
 ): GuidanceScore {
   const q = qnormalize(state.qBI);
   const attRad = attitudeErrorAngle(q, plant.qTarget);
@@ -133,6 +137,7 @@ function scoreGuidance(
   return {
     hard: extras.hard,
     fuelBelow: state.fuelMass + 1e-9 < fuelFloor ? 1 : 0,
+    captureCost: knnCaptureCost(state, paramsIsolated, plant),
     wrongWay: wPar > 0.01 ? 1 : 0,
     basinMiss: flags.inBasin ? 0 : 1,
     perpExcess: perp > 0.03 ? 1 : 0,
@@ -261,7 +266,7 @@ export function planGuidance(
     tLimit - rootState.time > 1e-3
       ? rolloutAdvance(rootState, params, plant, tLimit - rootState.time, cfg.rollout)
       : rootState;
-  const rootScore = scoreGuidance(coastedRoot, plant, { fuelUsed: 0, switches: 0, hard: 0 }, cfg.entryDeg, cfg.fuelFloorKg);
+  const rootScore = scoreGuidance(coastedRoot, plant, { fuelUsed: 0, switches: 0, hard: 0 }, cfg.entryDeg, cfg.fuelFloorKg, params.failedThrusterBeliefs);
   let frontier: Node[] = [
     { state: cloneRolloutState(rootState), actions: [], score: rootScore, key: "root" },
   ];
@@ -292,6 +297,7 @@ export function planGuidance(
           { fuelUsed: used, switches: node.score.switches + (prim.thrusterIds.length > 0 ? 1 : 0), hard },
           cfg.entryDeg,
           cfg.fuelFloorKg,
+          params.failedThrusterBeliefs,
         );
         const child: Node = {
           state: fired,

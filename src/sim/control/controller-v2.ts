@@ -38,6 +38,7 @@ import type {
 import { applyPrimitiveUntilComplete, rolloutFromSimLike, type RolloutParameters, type RolloutState } from "./rollout-model";
 import { basinFlags, eigenComponents, TERMINAL_ENTRY_DEG } from "./terminal-reachable";
 import { planTerminal } from "./terminal-planner";
+import { captureCost as knnCaptureCost } from "./capture-value";
 
 const DETUMBLE_SAFE = 0.12;
 
@@ -249,7 +250,9 @@ export class DiscretePulseV2Controller implements FlightController, PlantFlightC
     }
 
     const flags = basinFlags(state, this.plant, TERMINAL_ENTRY_DEG, this.flightCfg.fuelFloorKg);
-    const useTerminal = flags.inBasin || attDeg <= 8;
+    const vCost = knnCaptureCost(state, isolated, this.plant);
+    // Handoff is capture-cost, not a 12° attitude ball. Keep att<=8 as a safety net.
+    const useTerminal = vCost < 6 || flags.inBasin || attDeg <= 8;
     this.lastPhase = useTerminal ? "terminal" : "guidance";
     this.lastReachable = attDeg < 1 && wmag < 0.008 && est.fuel > this.flightCfg.fuelFloorKg;
 

@@ -1,0 +1,9 @@
+{
+  "k": 7,
+  "scale": [0.4, 0.04, 0.02, 0.08, 1.2, 2, 1, 1.2],
+  "neighbors": [],
+  "nTrain": 0,
+  "nVal": 0,
+  "valMae": null,
+  "notes": "placeholder — replaced by npm run eval:reachability-dataset"
+}

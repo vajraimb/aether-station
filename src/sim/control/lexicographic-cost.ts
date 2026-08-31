@@ -20,6 +20,7 @@ export interface LexicographicScore {
   terminalAttitudeGateFailure: number;
   sliderRisk: number;
   sloshRisk: number;
+  captureCost: number;
   attRad: number;
   omega: number;
   perpMomentum: number;
@@ -41,6 +42,7 @@ export interface ScoreContext {
   plant: PublicConfig;
   k12: number;
   scoreTimeIsTerminal: boolean;
+  captureCostOf?: (state: RolloutState) => number;
 }
 
 export function compareLexicographic(a: LexicographicScore, b: LexicographicScore): -1 | 0 | 1 {
@@ -57,6 +59,7 @@ export function compareLexicographic(a: LexicographicScore, b: LexicographicScor
     if (a[key] > b[key]) return 1;
   }
   const cont: (keyof LexicographicScore)[] = [
+    "captureCost",
     "attRad",
     "omega",
     "perpMomentum",
@@ -132,6 +135,7 @@ export function scoreRollout(
   const sloshRisk = slosh > 4 ? 1 : 0;
   const fuelBelow = state.fuelMass + 1e-9 < ctx.fuelFloorKg ? 1 : 0;
   const terminal = remainingBurnFeasible(state, ctx);
+  const captureCost = ctx.captureCostOf ? ctx.captureCostOf(state) : attRad;
   return {
     hardViolationCount: extras.hardViolationCount,
     predictedFuelBelowFloor: fuelBelow,
@@ -139,6 +143,7 @@ export function scoreRollout(
     terminalAttitudeGateFailure: terminal.attFail,
     sliderRisk,
     sloshRisk,
+    captureCost,
     attRad,
     omega,
     perpMomentum,
