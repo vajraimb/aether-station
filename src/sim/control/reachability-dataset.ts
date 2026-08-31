@@ -1,6 +1,7 @@
 /**
- * Public-state reachability dataset. Train/val split is by sample id hash,
- * not by a mission seed. Does not read Simulator truth or hidden eval seeds.
+ * Public-state reachability dataset.
+ * Split is grouped by family id (shared axis / fault / fuel). States from
+ * the same family never cross train and validation.
  */
 import { defaultPublicConfig } from "../constants";
 import { qmul, qnormalize, vnorm, vscale, type Quat, type Vec3 } from "../math3d";
@@ -36,6 +37,7 @@ function u01(i: number, salt: number): number {
 
 export interface DatasetSample {
   id: string;
+  groupId: string;
   split: "train" | "val";
   isolated: readonly number[];
   features: FeatureVector;
@@ -54,20 +56,39 @@ export interface DatasetReport {
   n: number;
   nTrain: number;
   nVal: number;
+  nGroups: number;
+  nTrainGroups: number;
+  nValGroups: number;
+  split: "grouped-family";
   counts: Record<CaptureLabel, number>;
   samples: DatasetSample[];
 }
 
-function sampleState(i: number, plant: PublicConfig): HarvestedState {
-  const attDeg = Math.exp(Math.log(1.2) + u01(i, 1) * (Math.log(35) - Math.log(1.2)));
-  const ax: Vec3 = [0.2 + u01(i, 2), 0.4 + u01(i, 3), 0.1 + u01(i, 4)];
+export function splitOfGroup(groupId: string): "train" | "val" {
+  let h = 2166136261;
+  for (let i = 0; i < groupId.length; i += 1) h = Math.imul(h ^ groupId.charCodeAt(i), 16777619);
+  return ((h >>> 0) % 5 === 0 ? "val" : "train") as "train" | "val";
+}
+
+/** @deprecated id-hash split leaked nearby states; use splitOfGroup */
+export function splitOf(id: string): "train" | "val" {
+  const g = id.includes("::") ? id.slice(0, id.indexOf("::")) : id;
+  return splitOfGroup(g);
+}
+
+const TRAJ_ATT_DEG = [22, 14, 8, 4, 2] as const;
+
+function sampleFamilyMember(group: number, step: number, plant: PublicConfig): HarvestedState {
+  const ax: Vec3 = [0.2 + u01(group, 2), 0.4 + u01(group, 3), 0.1 + u01(group, 4)];
+  const attDeg = TRAJ_ATT_DEG[step % TRAJ_ATT_DEG.length]!;
   const qErr = qAxisAngle(ax, (attDeg * Math.PI) / 180);
   const q = qnormalize(qmul(plant.qTarget, qErr));
   const n = vnorm(ax) || 1;
   const eN: Vec3 = [ax[0] / n, ax[1] / n, ax[2] / n];
-  const mode = u01(i, 5);
-  const closing = mode < 0.45 ? -(0.004 + 0.02 * u01(i, 6)) : mode < 0.75 ? 0 : 0.006 + 0.02 * u01(i, 6);
-  const perp = (u01(i, 7) - 0.5) * 0.03;
+  const mode = u01(group, 5);
+  const closing0 = mode < 0.45 ? -0.014 : mode < 0.75 ? 0 : 0.01;
+  const closing = closing0 * (0.4 + 0.6 * (1 - step / 4));
+  const perp = (u01(group, 7) - 0.5) * 0.024 * (1 - 0.15 * step);
   const pAx: Vec3 = [eN[1], -eN[0], 0];
   const pn = vnorm(pAx) || 1;
   const w: Vec3 = [
@@ -75,50 +96,47 @@ function sampleState(i: number, plant: PublicConfig): HarvestedState {
     eN[1] * closing + (pAx[1] / pn) * perp,
     eN[2] * closing,
   ];
-  const faultRoll = u01(i, 8);
-  const isolated = faultRoll < 0.55 ? [] : [Math.floor(u01(i, 9) * 6)];
-  const fuel = 2.86 + u01(i, 10) * 1.7;
+  const faultRoll = u01(group, 8);
+  const isolated = faultRoll < 0.55 ? [] : [Math.floor(u01(group, 9) * 6)];
+  const fuel = 2.9 + u01(group, 10) * 1.5;
   const pending =
-    u01(i, 11) < 0.2 && isolated[0] !== 0
+    u01(group, 11) < 0.18 && isolated[0] !== 0
       ? [{ id: 0, tOn: 0.04, tOff: 0.16 }]
       : [];
   const state: RolloutState = rolloutFromSimLike({
     time: 0,
     q,
     w,
-    s: (u01(i, 12) - 0.5) * 0.8,
+    s: (u01(group, 12) - 0.5) * 0.8,
     sd: 0,
-    th1: (u01(i, 13) - 0.5) * 0.1,
+    th1: (u01(group, 13) - 0.5) * 0.1,
     th1d: 0,
-    th2: (u01(i, 14) - 0.5) * 0.08,
+    th2: (u01(group, 14) - 0.5) * 0.08,
     th2d: 0,
     fuel,
     pendingPulses: pending,
   });
-  const rateMode = closing < -1e-4 ? "closing" : closing > 1e-4 ? "rest" : "rest";
+  const groupId = `fam-${group}`;
   return {
-    id: `ds-${i}`,
+    id: `${groupId}::${step}`,
     bucketDeg: attDeg,
-    rateMode: rateMode === "closing" ? "closing" : "rest",
+    rateMode: closing < -1e-4 ? "closing" : "rest",
     fault: isolated.length ? "plusY-isolated" : "healthy",
     isolated,
     state,
   };
 }
 
-export function splitOf(id: string): "train" | "val" {
-  let h = 2166136261;
-  for (let i = 0; i < id.length; i += 1) h = Math.imul(h ^ id.charCodeAt(i), 16777619);
-  return ((h >>> 0) % 5 === 0 ? "val" : "train") as "train" | "val";
-}
-
 export function labelOne(harvested: HarvestedState, plant: PublicConfig, horizonS: number, budget: number): DatasetSample {
+  const groupId = harvested.id.includes("::") ? harvested.id.slice(0, harvested.id.indexOf("::")) : harvested.id;
+  const split = splitOfGroup(groupId);
   const features = captureFeatures(harvested.state, harvested.isolated, plant);
   if (proveInfeasible(harvested.state, plant, harvested.isolated)) {
     const g = capturedGates(harvested.state, plant.qTarget);
     return {
       id: harvested.id,
-      split: splitOf(harvested.id),
+      groupId,
+      split,
       isolated: harvested.isolated,
       features,
       label: "proven_infeasible",
@@ -142,10 +160,10 @@ export function labelOne(harvested: HarvestedState, plant: PublicConfig, horizon
     if (better) best = r;
   }
   const label: CaptureLabel = best.captured ? "captured" : "search_unreached";
-  const g0 = capturedGates(harvested.state, plant.qTarget);
   return {
     id: harvested.id,
-    split: splitOf(harvested.id),
+    groupId,
+    split,
     isolated: harvested.isolated,
     features,
     label,
@@ -163,23 +181,45 @@ export function labelOne(harvested: HarvestedState, plant: PublicConfig, horizon
 export function buildDataset(
   n: number,
   plant: PublicConfig = defaultPublicConfig(),
-  opts: { horizonS?: number; expansionBudget?: number } = {},
+  opts: { horizonS?: number; expansionBudget?: number; perGroup?: number } = {},
 ): DatasetReport {
   const horizonS = opts.horizonS ?? 8;
   const budget = opts.expansionBudget ?? 20;
+  const perGroup = opts.perGroup ?? TRAJ_ATT_DEG.length;
+  const nGroups = Math.max(1, Math.ceil(n / perGroup));
   const samples: DatasetSample[] = [];
   const counts: Record<CaptureLabel, number> = { captured: 0, search_unreached: 0, proven_infeasible: 0 };
-  for (let i = 0; i < n; i += 1) {
-    const harvested = sampleState(i, plant);
-    const row = labelOne(harvested, plant, horizonS, budget);
-    counts[row.label] += 1;
-    samples.push(row);
+  for (let g = 0; g < nGroups && samples.length < n; g += 1) {
+    for (let step = 0; step < perGroup && samples.length < n; step += 1) {
+      const harvested = sampleFamilyMember(g, step, plant);
+      const row = labelOne(harvested, plant, horizonS, budget);
+      counts[row.label] += 1;
+      samples.push(row);
+    }
   }
+  const groups = new Set(samples.map((s) => s.groupId));
+  const trainG = new Set(samples.filter((s) => s.split === "train").map((s) => s.groupId));
+  const valG = new Set(samples.filter((s) => s.split === "val").map((s) => s.groupId));
   return {
     n: samples.length,
     nTrain: samples.filter((s) => s.split === "train").length,
     nVal: samples.filter((s) => s.split === "val").length,
+    nGroups: groups.size,
+    nTrainGroups: trainG.size,
+    nValGroups: valG.size,
+    split: "grouped-family",
     counts,
     samples,
   };
+}
+
+export function assertGroupedSplit(samples: readonly DatasetSample[]): string[] {
+  const map = new Map<string, "train" | "val">();
+  const leaks: string[] = [];
+  for (const s of samples) {
+    const prev = map.get(s.groupId);
+    if (prev && prev !== s.split) leaks.push(s.groupId);
+    map.set(s.groupId, s.split);
+  }
+  return [...new Set(leaks)];
 }

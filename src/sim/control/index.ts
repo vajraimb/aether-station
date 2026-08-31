@@ -15,4 +15,6 @@ export * from "./capture-reachability";
 export * from "./reachability-label";
 export * from "./reachability-dataset";
 export * from "./capture-value";
+export * from "./capture-value-validation";
+
 

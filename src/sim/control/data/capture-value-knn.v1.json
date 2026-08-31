@@ -1,0 +1,17 @@
+{
+  "k": 7,
+  "scale": [0.4, 0.04, 0.02, 0.08, 1.2, 2, 1, 1.2],
+  "neighbors": [],
+  "nTrain": 0,
+  "nVal": 0,
+  "valMae": null,
+  "oodThreshold": 1,
+  "nnTrainP50": 0,
+  "nnTrainP90": 0,
+  "featureSchemaVersion": "v1",
+  "trainerVersion": "knn-7-l2-scaled",
+  "datasetHash": null,
+  "splitHash": null,
+  "modelHash": null,
+  "notes": "placeholder replaced by eval:reachability-dataset"
+}
