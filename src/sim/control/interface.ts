@@ -10,6 +10,8 @@ export interface PublicControllerConfig {
   readonly beamWidth: number
 }
 
+export type PlannerPhase = 'guidance' | 'terminal' | 'fallback'
+
 export interface ControllerDiagnostics {
   readonly mode: ControllerMode
   readonly observationTime: number
@@ -21,6 +23,9 @@ export interface ControllerDiagnostics {
   readonly predictedTerminalAttitudeErrorDeg: number | null
   readonly predictedTerminalAngularSpeedRadS: number | null
   readonly predictedTerminalFuelKg: number | null
+  readonly plannerPhase?: PlannerPhase
+  readonly terminalReachable?: boolean
+  readonly terminalEntryDeg?: number
 }
 
 export interface ControlCommand {

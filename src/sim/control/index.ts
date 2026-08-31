@@ -7,4 +7,6 @@ export * from "./rollout-model";
 export * from "./rollout-error";
 export * from "./lexicographic-cost";
 export * from "./beam-planner";
+export * from "./terminal-planner";
+export * from "./terminal-reachable";
 export * from "./controller-v2";

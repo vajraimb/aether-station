@@ -80,6 +80,8 @@ const ctrlFiles = [
   "control/discrete-actions.ts",
   "control/rollout-model.ts",
   "control/rollout-error.ts",
+  "control/terminal-planner.ts",
+  "control/terminal-reachable.ts",
   "control/beam-planner.ts",
   "control/lexicographic-cost.ts",
   "control/controller-v2.ts",

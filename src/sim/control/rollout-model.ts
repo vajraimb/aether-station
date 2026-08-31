@@ -339,6 +339,20 @@ export function applyPrimitive(
   return rolloutAdvance(started, params, plant, primitive.durationS, rcfg);
 }
 
+/** Advance through command delay plus pulse width so the queued firing is visible. */
+export function applyPrimitiveUntilComplete(
+  state: RolloutState,
+  params: RolloutParameters,
+  plant: PublicConfig,
+  primitive: Readonly<PulsePrimitive>,
+  rcfg: RolloutConfig = DEFAULT_ROLLOUT_CONFIG,
+): RolloutState {
+  const queued = enqueuePrimitive(state.pendingPulses, primitive, state.time, rcfg.commandDelayS);
+  const started: RolloutState = { ...cloneRolloutState(state), pendingPulses: queued };
+  const span = primitive.durationS + rcfg.commandDelayS;
+  return rolloutAdvance(started, params, plant, span, rcfg);
+}
+
 export function predictedSloshEnergy(state: RolloutState, plant: PublicConfig, k12: number): number {
   const mm = modalMasses(plant.fluidMass);
   return sloshEnergy(
