@@ -2,7 +2,7 @@
 
 Branch: `research/wrench-nullspace-and-long-sequence` @ `65d6992`
 
-Not a controller. kNN-value remains stopped. Short 2–4 macros remain unwired. Old V2 Draft PR is untouched. Physics kernel frozen at `bdfff5b`.
+Not a controller. kNN-value remains stopped. Short 2–4 macros remain unwired. Old V2 Draft PR is untouched. Physics kernel frozen at `bdfff5b`. Follow-on (not this branch): `research/robust-terminal-cancellation`.
 
 Status: **PHYSICS PASS (236/236) / LINEAR SPAN RANK-3 / SHORT-PULSE ρ = O(1) / CANCEL HELPS NET ⊥ ON SOME STATES / NOT WIRED / OVERALL FAIL**
 

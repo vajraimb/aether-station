@@ -14,6 +14,7 @@ import { runBeliefMismatchTests } from "./belief-mismatch.test";
 import { runActionMacroTests } from "./action-macros.test";
 import { runWrenchGeometryTests } from "./wrench-geometry.test";
 import { runNullspaceSearchTests } from "./nullspace-search.test";
+import { runRobustTerminalTests } from "./robust-terminal.test";
 
 interface T {
   name: string;
@@ -48,6 +49,7 @@ export function runControlV2Tests(): T[] {
   out.push(...runActionMacroTests());
   out.push(...runWrenchGeometryTests());
   out.push(...runNullspaceSearchTests());
+  out.push(...runRobustTerminalTests());
 
   const plant = defaultPublicConfig({ duration: 0.8 });
   const v2 = createFlightController(plant, { mode: "discrete-pulse-v2" });

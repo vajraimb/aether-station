@@ -40,6 +40,7 @@ outputs/capture-reachability-study.quick.json
 outputs/reachability-dataset.quick.json
 outputs/belief-truth-audit-train10.quick.json
 outputs/wrench-nullspace-study.quick.json
+outputs/robust-terminal-study.quick.json
 
 # OS / editor
 .DS_Store

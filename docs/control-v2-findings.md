@@ -6,7 +6,7 @@ Status: **PHYSICS PASS / CAPTURE-VALUE VALIDATION PASS / ONLINE CONTROL UNPROVEN
 
 PR: **DRAFT / DO NOT MERGE**
 
-Follow-on diagnosis (macros + belief audit) lives on `control/action-macro-and-belief-audit` — see `docs/action-macro-and-belief-audit.md`. That work is not a controller.
+Follow-on diagnosis (macros + belief audit) lives on `control/action-macro-and-belief-audit` — see `docs/action-macro-and-belief-audit.md`. Wrench / long-sequence: `research/wrench-nullspace-and-long-sequence` (`docs/wrench-nullspace-study.md`). Low-rate robust terminal cancellation: `research/robust-terminal-cancellation` (`docs/robust-terminal-cancellation.md`). None of that work is a controller.
 
 Train-50 and hidden were not run. Beam width, physics kernel, and the demo seed are unchanged.
 
