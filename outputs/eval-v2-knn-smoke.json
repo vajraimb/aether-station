@@ -1,0 +1,131 @@
+{
+  "commitSha": "f9fe30282a113054993fbed1c06c8141326e71ee",
+  "branch": "control/discrete-pulse-planner-v2",
+  "controllerVersion": "discrete-pulse-v2",
+  "physicsBaselineSha": "bdfff5b4c62733d7156d2f9cdeeaa75661d6c9f4",
+  "set": "train",
+  "count": 3,
+  "elapsed_ms": 204765,
+  "timestamp": "2026-08-31T08:53:46.683Z",
+  "rates": {
+    "allGates": 0,
+    "attitude": 0,
+    "rate": 0.3333333333333333,
+    "fuel": 1,
+    "param": 0,
+    "fdir": 1,
+    "slosh": 1,
+    "impact": 1
+  },
+  "stats": {
+    "att": {
+      "median": 66.2008548360515,
+      "p90": 90.24146456680722,
+      "worst": 90.24146456680722,
+      "best": 49.96467420714072
+    },
+    "fuel": {
+      "median": 2.9608301664310552,
+      "p90": 3.247742604614384,
+      "worst": 3.247742604614384,
+      "best": 2.9150760454604026
+    },
+    "omega": {
+      "median": 0.06965529974585065,
+      "p90": 0.06979141366738625,
+      "worst": 0.06979141366738625,
+      "best": 0.004805449251325788
+    }
+  },
+  "targets": {
+    "allGates": 0.8,
+    "attitude": 0.9,
+    "fuel": 0.9,
+    "fdir": 0.95,
+    "param": 0.8
+  },
+  "pass": {
+    "allGates": false,
+    "attitude": false,
+    "fuel": true,
+    "fdir": true,
+    "param": false
+  },
+  "rows": [
+    {
+      "seed": 800000,
+      "faultTime": 93.15644436981529,
+      "faultThruster": 4,
+      "att": 90.24146456680722,
+      "w": 0.06965529974585065,
+      "fuel": 2.9608301664310552,
+      "impact": 0,
+      "sloshRatio": 0.0011457195955982221,
+      "param": 0.18502925973779946,
+      "isolationDelay": 0.24855563017224824,
+      "isolated": 4,
+      "isolationOk": 1,
+      "allGates": false,
+      "pulseCount": 425,
+      "totalOnTime": 83.1099999999969,
+      "c1Est": 0.10771119224630638,
+      "c2Est": 0.06215361321294457,
+      "k12Est": 0.3,
+      "etaTEst": 0.8214276879472733,
+      "c1True": 0.1760396556649357,
+      "c2True": 0.07850884274579585,
+      "k12True": 0.2864437860902399,
+      "etaTTrue": 0.9089860089635476
+    },
+    {
+      "seed": 800017,
+      "faultTime": 79.91050987737253,
+      "faultThruster": 3,
+      "att": 49.96467420714072,
+      "w": 0.06979141366738625,
+      "fuel": 2.9150760454604026,
+      "impact": 0,
+      "sloshRatio": 0.0007566588043425564,
+      "param": 0.22626842559700783,
+      "isolationDelay": 1.39449012262601,
+      "isolated": 3,
+      "isolationOk": 1,
+      "allGates": false,
+      "pulseCount": 423,
+      "totalOnTime": 88.39999999999209,
+      "c1Est": 0.10072398825704869,
+      "c2Est": 0.07733743221150079,
+      "k12Est": 0.3,
+      "etaTEst": 0.8209439289269505,
+      "c1True": 0.12323543682694435,
+      "c2True": 0.13191816558595748,
+      "k12True": 0.39904411684256047,
+      "etaTTrue": 0.8737657905463129
+    },
+    {
+      "seed": 800034,
+      "faultTime": 66.42021628445946,
+      "faultThruster": 0,
+      "att": 66.2008548360515,
+      "w": 0.004805449251325788,
+      "fuel": 3.247742604614384,
+      "impact": 0,
+      "sloshRatio": 0.00006883035646388787,
+      "param": 0.17789489574237025,
+      "isolationDelay": 1.479783715551278,
+      "isolated": 0,
+      "isolationOk": 1,
+      "allGates": false,
+      "pulseCount": 302,
+      "totalOnTime": 68.69500000001001,
+      "c1Est": 0.13126580026427304,
+      "c2Est": 0.11104761421256142,
+      "k12Est": 0.3,
+      "etaTEst": 0.8208570321198413,
+      "c1True": 0.1455318629462272,
+      "c2True": 0.13033229970373214,
+      "k12True": 0.22485002274625004,
+      "etaTTrue": 0.9449957534344866
+    }
+  ]
+}
