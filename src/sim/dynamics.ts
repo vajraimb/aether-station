@@ -9,7 +9,9 @@ import {
   qRotate,
   qRotateInv,
   qdot,
+  qnorm,
   qnormalize,
+  solveLinear,
   vadd,
   vcross,
   vdot,
@@ -46,18 +48,12 @@ import type { PublicConfig, SimState } from "./types";
  * none). Coupling k12 shares a single potential V = I_eq k12 (1 − cos(θ1−θ2)).
  * Equal modal masses keep that potential energy-consistent.
  *
- * Approximations (internal forcing uses origin acceleration ≈ a_cm; CM offset
- * is retained in I_cm and τ_cm = τ_O − r_cm × F):
- *   - static fluid inertia is lumped into dry_inertia_B
- *   - fuel is a point mass at O (5 kg / 1050 kg)
- *   - products of inertia from the pendulums are kept
- *   - CM-recoil (m_int/M ~ 5 %) is dropped in the slider/slosh scalar EOM
- *     but retained in Euler through I(s,θ) and h_rel(θ̇)
- *
- * Action/reaction: pendulum restoring and damping act through the hinge at O;
- * they never appear as external torque. External torque is thrusters only.
- * Slider actuator is an internal pair along x (zero net force and, because
- * the line of action is the x-axis, zero torque about O).
+ * Newton–Euler is written about the system CM with the slider and both
+ * pendulums fully coupled (recoil retained). Internal forces therefore drop
+ * from F_ext and τ_cm; they reappear only as generalised forces on (s, θ).
+ * External torque is thrusters only. Slider actuator is an internal pair
+ * along x (zero net force, zero net torque about O; about CM the pair is
+ * still internal so τ_cm_ext = 0).
  */
 
 export function modalMasses(fluidMass: number): { m1: number; m2: number; mStatic: number } {
@@ -79,6 +75,13 @@ export function pendulumETheta(theta: number, axis: 1 | 2): Vec3 {
   const c = Math.cos(theta);
   if (axis === 1) return [c, -s, 0];
   return [c, 0, -s];
+}
+
+export function pendulumERadial(theta: number, axis: 1 | 2): Vec3 {
+  const s = Math.sin(theta);
+  const c = Math.cos(theta);
+  if (axis === 1) return [s, c, 0];
+  return [s, 0, c];
 }
 
 export interface MassState {
@@ -156,22 +159,49 @@ export function sloshEnergy(
   return T + V;
 }
 
-export function relativeAM(ms: MassState, sd: number, th1d: number, th2d: number): Vec3 {
-  // h_rel about origin from coordinate rates (slider contributes 0 about O).
+/** Relative AM about the body origin from coordinate rates. Slider term is 0. */
+export function relativeAM(ms: MassState, _sd: number, th1d: number, th2d: number): Vec3 {
   return [0, ms.Ieq2 * th2d, -ms.Ieq1 * th1d];
 }
 
+export function rcmDot(ms: MassState, sd: number, th1d: number, th2d: number, th1: number, th2: number): Vec3 {
+  const e1 = pendulumETheta(th1, 1);
+  const e2 = pendulumETheta(th2, 2);
+  return [
+    (ms.ms * sd + ms.m1 * ms.L * th1d * e1[0] + ms.m2 * ms.L * th2d * e2[0]) / ms.M,
+    (ms.m1 * ms.L * th1d * e1[1] + ms.m2 * ms.L * th2d * e2[1]) / ms.M,
+    (ms.m1 * ms.L * th1d * e1[2] + ms.m2 * ms.L * th2d * e2[2]) / ms.M,
+  ];
+}
+
+/** h_rel about CM: h_O − M r_cm × ṙ_cm. */
+export function hRelCm(ms: MassState, sd: number, th1d: number, th2d: number, th1: number, th2: number): Vec3 {
+  const hO = relativeAM(ms, sd, th1d, th2d);
+  const rd = rcmDot(ms, sd, th1d, th2d, th1, th2);
+  return vsub(hO, vscale(vcross(ms.rCmB, rd), ms.M));
+}
+
+export function angularMomentumCmB(cfg: PublicConfig, st: SimState): Vec3 {
+  const ms = massState(cfg, st.s, st.th1, st.th2, st.fuel);
+  return vadd(mv(ms.Icm, st.w), hRelCm(ms, st.sd, st.th1d, st.th2d, st.th1, st.th2));
+}
+
+/** Conserved H about the system CM, inertial components. */
 export function totalAngularMomentumI(
   cfg: PublicConfig,
   st: SimState,
   _k12: number,
 ): Vec3 {
+  return qRotate(st.q, angularMomentumCmB(cfg, st));
+}
+
+export function totalAngularMomentumAbout0(
+  cfg: PublicConfig,
+  st: SimState,
+  k12: number,
+): Vec3 {
   const ms = massState(cfg, st.s, st.th1, st.th2, st.fuel);
-  const hB = vadd(mv(ms.Iorigin, st.w), relativeAM(ms, st.sd, st.th1d, st.th2d));
-  // H about origin in inertial, plus CM orbital term about inertial origin
-  const H_o_I = qRotate(st.q, hB);
-  const H_cm_orb = vcross(st.rCmI, vscale(st.vCmI, ms.M));
-  return vadd(H_o_I, H_cm_orb);
+  return vadd(totalAngularMomentumI(cfg, st, k12), vcross(st.rCmI, vscale(st.vCmI, ms.M)));
 }
 
 export function linearMomentumI(cfg: PublicConfig, st: SimState): Vec3 {
@@ -179,17 +209,67 @@ export function linearMomentumI(cfg: PublicConfig, st: SimState): Vec3 {
   return vscale(st.vCmI, ms.M);
 }
 
+export interface EnergyParts {
+  translational: number;
+  rotational: number;
+  gyrostat: number;
+  relative: number;
+  sloshPotential: number;
+  couplingPotential: number;
+  total: number;
+}
+
+/**
+ * System energy about the CM (Koenig + relative):
+ *   T = ½ M |v_cm|² + ½ ω·I_cm·ω + ω·h_rel_cm + T⋆ + V
+ * T⋆ = ½ m_s ṡ² + ½ I1 θ̇1² + ½ I2 θ̇2² − ½ M |ṙ_cm|²
+ */
+export function energyParts(cfg: PublicConfig, st: SimState, k12: number): EnergyParts {
+  const ms = massState(cfg, st.s, st.th1, st.th2, st.fuel);
+  const rd = rcmDot(ms, st.sd, st.th1d, st.th2d, st.th1, st.th2);
+  const hcm = hRelCm(ms, st.sd, st.th1d, st.th2d, st.th1, st.th2);
+  const translational = 0.5 * ms.M * vdot(st.vCmI, st.vCmI);
+  const rotational = 0.5 * vdot(st.w, mv(ms.Icm, st.w));
+  const gyrostat = vdot(st.w, hcm);
+  const relative =
+    0.5 * ms.ms * st.sd * st.sd +
+    0.5 * ms.Ieq1 * st.th1d * st.th1d +
+    0.5 * ms.Ieq2 * st.th2d * st.th2d -
+    0.5 * ms.M * vdot(rd, rd);
+  const Ieq = 0.5 * (ms.Ieq1 + ms.Ieq2);
+  const sloshPotential =
+    ms.Ieq1 * OMEGA1 * OMEGA1 * (1 - Math.cos(st.th1)) +
+    ms.Ieq2 * OMEGA2 * OMEGA2 * (1 - Math.cos(st.th2));
+  const couplingPotential = Ieq * k12 * (1 - Math.cos(st.th1 - st.th2));
+  return {
+    translational,
+    rotational,
+    gyrostat,
+    relative,
+    sloshPotential,
+    couplingPotential,
+    total: translational + rotational + gyrostat + relative + sloshPotential + couplingPotential,
+  };
+}
+
 export function kineticPlusPotential(
   cfg: PublicConfig,
   st: SimState,
   k12: number,
 ): number {
+  return energyParts(cfg, st, k12).total;
+}
+
+export function dampingPower(cfg: PublicConfig, st: SimState, c1: number, c2: number): number {
   const ms = massState(cfg, st.s, st.th1, st.th2, st.fuel);
-  const Ttrans = 0.5 * ms.M * vdot(st.vCmI, st.vCmI);
-  const Trot = 0.5 * vdot(st.w, mv(ms.Icm, st.w));
-  const Trel = 0.5 * ms.ms * st.sd * st.sd;
-  const Es = sloshEnergy(st.th1, st.th1d, st.th2, st.th2d, ms.m1, ms.m2, ms.L, k12);
-  return Ttrans + Trot + Trel + Es;
+  return -c1 * ms.Ieq1 * st.th1d * st.th1d - c2 * ms.Ieq2 * st.th2d * st.th2d;
+}
+
+export function actuatorPower(st: SimState, u: ForceInput, cfg: PublicConfig): number {
+  const ms = massState(cfg, st.s, st.th1, st.th2, st.fuel);
+  const tauCm = vsub(u.tauThrO, vcross(ms.rCmB, u.FthrB));
+  const FthrI = qRotate(st.q, u.FthrB);
+  return u.Fslider * st.sd + vdot(tauCm, st.w) + vdot(FthrI, st.vCmI);
 }
 
 export interface ForceInput {
@@ -209,19 +289,23 @@ export interface AccelOut {
   th2dd: number;
 }
 
-function IdotOmega(ms: MassState, sd: number, th1d: number, th2d: number, w: Vec3): Vec3 {
-  const acc = (m: number, r: Vec3, v: Vec3): Vec3 => {
-    const rv = vdot(r, v);
-    const rw = vdot(r, w);
-    const vw = vdot(v, w);
-    return vscale(vsub(vsub(vscale(w, 2 * rv), vscale(v, rw)), vscale(r, vw)), m);
-  };
-  const vs: Vec3 = [sd, 0, 0];
-  const th1 = Math.atan2(ms.r1[0], ms.r1[1]);
-  const th2 = Math.atan2(ms.r2[0], ms.r2[2]);
-  const v1 = vscale(pendulumETheta(th1, 1), ms.L * th1d);
-  const v2 = vscale(pendulumETheta(th2, 2), ms.L * th2d);
-  return vadd(acc(ms.ms, ms.rs, vs), vadd(acc(ms.m1, ms.r1, v1), acc(ms.m2, ms.r2, v2)));
+/** d/dt [ m (|r|² I − r rᵀ) ] ω */
+function inertiaRateOmega(m: number, r: Vec3, v: Vec3, w: Vec3): Vec3 {
+  const rv = vdot(r, v);
+  const rw = vdot(r, w);
+  const vw = vdot(v, w);
+  return vscale(vsub(vsub(vscale(w, 2 * rv), vscale(v, rw)), vscale(r, vw)), m);
+}
+
+function zeros6(): number[][] {
+  return [
+    [0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0],
+  ];
 }
 
 export function accelerations(cfg: PublicConfig, st: SimState, u: ForceInput): AccelOut {
@@ -231,74 +315,147 @@ export function accelerations(cfg: PublicConfig, st: SimState, u: ForceInput): A
   const aCmI = vscale(FthrI, 1 / ms.M);
   const aCmB = qRotateInv(st.q, aCmI);
 
-  // Origin acceleration ≈ a_cm (documented 5% approximation).
-  const aO = aCmB;
-
-  // Slider EOM along body x. α × r_s has zero x-component.
-  const centrif = st.s * (w[1] * w[1] + w[2] * w[2]);
-  const sdd = u.Fslider / ms.ms + centrif - aO[0];
-
-  // Kinematic forcing for pendulums, excluding α (handled in 3×3) and θ̈.
   const e1 = pendulumETheta(st.th1, 1);
   const e2 = pendulumETheta(st.th2, 2);
+  const er1 = pendulumERadial(st.th1, 1);
+  const er2 = pendulumERadial(st.th2, 2);
+  const vs: Vec3 = [st.sd, 0, 0];
   const v1 = vscale(e1, ms.L * st.th1d);
   const v2 = vscale(e2, ms.L * st.th2d);
-  const frameAcc = (r: Vec3, vrel: Vec3): Vec3 =>
-    vadd(aO, vadd(vcross(w, vcross(w, r)), vscale(vcross(w, vrel), 2)));
-  const a1kin = -vdot(frameAcc(ms.r1, v1), e1) / ms.L;
-  const a2kin = -vdot(frameAcc(ms.r2, v2), e2) / ms.L;
+  const rd = rcmDot(ms, st.sd, st.th1d, st.th2d, st.th1, st.th2);
+  const hcm = hRelCm(ms, st.sd, st.th1d, st.th2d, st.th1, st.th2);
+  const Hcm = vadd(mv(ms.Icm, w), hcm);
 
-  const t1dd0 =
+  const IdotO = vadd(
+    inertiaRateOmega(ms.ms, ms.rs, vs, w),
+    vadd(inertiaRateOmega(ms.m1, ms.r1, v1, w), inertiaRateOmega(ms.m2, ms.r2, v2, w)),
+  );
+  const IdotCm = vsub(IdotO, inertiaRateOmega(ms.M, ms.rCmB, rd, w));
+  const tauCm = vsub(u.tauThrO, vcross(ms.rCmB, u.FthrB));
+
+  const rddQuad: Vec3 = vscale(
+    vadd(vscale(er1, ms.m1 * ms.L * st.th1d * st.th1d), vscale(er2, ms.m2 * ms.L * st.th2d * st.th2d)),
+    -1 / ms.M,
+  );
+
+  const wcwcr = vcross(w, vcross(w, ms.rCmB));
+  const twoWrd = vscale(vcross(w, rd), 2);
+
+  const A = zeros6();
+  const b = [0, 0, 0, 0, 0, 0];
+
+  // Euler about CM:
+  //   I_cm α + ḣ_O − M r_cm × r̈_cm = τ_cm − İ_cm ω − ω×H_cm
+  // ḣ_O = [0, I2 θ̈2, −I1 θ̈1]
+  // r̈_cm = (m_s/M) s̈ e_x + (m1 L/M) θ̈1 e1 + (m2 L/M) θ̈2 e2 + rddQuad
+  for (let i = 0; i < 3; i++) {
+    A[i]![0] = ms.Icm[i]![0]!;
+    A[i]![1] = ms.Icm[i]![1]!;
+    A[i]![2] = ms.Icm[i]![2]!;
+  }
+  A[0]![3] = 0;
+  A[1]![3] = -ms.ms * ms.rCmB[2];
+  A[2]![3] = ms.ms * ms.rCmB[1];
+  const rcx_e1 = vcross(ms.rCmB, e1);
+  A[0]![4] = -ms.m1 * ms.L * rcx_e1[0];
+  A[1]![4] = -ms.m1 * ms.L * rcx_e1[1];
+  A[2]![4] = -ms.Ieq1 - ms.m1 * ms.L * rcx_e1[2];
+  const rcx_e2 = vcross(ms.rCmB, e2);
+  A[0]![5] = -ms.m2 * ms.L * rcx_e2[0];
+  A[1]![5] = ms.Ieq2 - ms.m2 * ms.L * rcx_e2[1];
+  A[2]![5] = -ms.m2 * ms.L * rcx_e2[2];
+
+  const eulerRhs = vadd(
+    vsub(tauCm, IdotCm),
+    vsub(vscale(vcross(ms.rCmB, rddQuad), ms.M), vcross(w, Hcm)),
+  );
+  b[0] = eulerRhs[0];
+  b[1] = eulerRhs[1];
+  b[2] = eulerRhs[2];
+
+  // Slider along body x, with exact a_O (recoil retained).
+  A[3]![0] = 0;
+  A[3]![1] = -ms.rCmB[2];
+  A[3]![2] = ms.rCmB[1];
+  A[3]![3] = 1 - ms.ms / ms.M;
+  A[3]![4] = -((ms.m1 * ms.L) / ms.M) * e1[0];
+  A[3]![5] = -((ms.m2 * ms.L) / ms.M) * e2[0];
+  const centrif = st.s * (w[1] * w[1] + w[2] * w[2]);
+  b[3] =
+    u.Fslider / Math.max(ms.ms, 1e-12) -
+    aCmB[0] +
+    wcwcr[0] +
+    twoWrd[0] +
+    centrif +
+    rddQuad[0];
+
+  const L = ms.L;
+  const invL = L > 1e-12 ? 1 / L : 0;
+  const frameCm = vadd(wcwcr, twoWrd);
+
+  const Q1 =
     -u.c1 * st.th1d -
     OMEGA1 * OMEGA1 * Math.sin(st.th1) -
-    u.k12 * Math.sin(st.th1 - st.th2) +
-    a1kin;
-  const t2dd0 =
+    u.k12 * Math.sin(st.th1 - st.th2);
+  if (ms.m1 < 1e-12 || L < 1e-12) {
+    A[4]![4] = 1;
+    b[4] = 0;
+  } else {
+    const rcmxe1 = vcross(ms.rCmB, e1);
+    A[4]![0] = -rcmxe1[0] * invL;
+    A[4]![1] = -rcmxe1[1] * invL;
+    A[4]![2] = -rcmxe1[2] * invL - 1;
+    A[4]![3] = -((ms.ms / ms.M) * e1[0]) * invL;
+    A[4]![4] = 1 - ms.m1 / ms.M;
+    A[4]![5] = -(ms.m2 / ms.M) * vdot(e2, e1);
+    const frame1 = vadd(vcross(w, vcross(w, ms.r1)), vscale(vcross(w, v1), 2));
+    b[4] =
+      Q1 -
+      vdot(aCmB, e1) * invL +
+      vdot(frameCm, e1) * invL -
+      vdot(frame1, e1) * invL +
+      vdot(rddQuad, e1) * invL;
+  }
+
+  const Q2 =
     -u.c2 * st.th2d -
     OMEGA2 * OMEGA2 * Math.sin(st.th2) -
-    u.k12 * Math.sin(st.th2 - st.th1) +
-    a2kin;
+    u.k12 * Math.sin(st.th2 - st.th1);
+  if (ms.m2 < 1e-12 || L < 1e-12) {
+    A[5]![5] = 1;
+    b[5] = 0;
+  } else {
+    const rcmxe2 = vcross(ms.rCmB, e2);
+    A[5]![0] = -rcmxe2[0] * invL;
+    A[5]![1] = -rcmxe2[1] * invL + 1;
+    A[5]![2] = -rcmxe2[2] * invL;
+    A[5]![3] = -((ms.ms / ms.M) * e2[0]) * invL;
+    A[5]![4] = -(ms.m1 / ms.M) * vdot(e1, e2);
+    A[5]![5] = 1 - ms.m2 / ms.M;
+    const frame2 = vadd(vcross(w, vcross(w, ms.r2)), vscale(vcross(w, v2), 2));
+    b[5] =
+      Q2 -
+      vdot(aCmB, e2) * invL +
+      vdot(frameCm, e2) * invL -
+      vdot(frame2, e2) * invL +
+      vdot(rddQuad, e2) * invL;
+  }
 
-  // α coupling: θ1̈ += α_z , θ2̈ += −α_y  (see module note).
-  // h_rel_dot = [0, I2 θ2̈, −I1 θ1̈]
-  // Euler about origin (internal forces drop):
-  //   I_o α + İω + ḣ_rel + ω×(I_o ω + h_rel) = τ_thr_O
-  const hrel = relativeAM(ms, st.sd, st.th1d, st.th2d);
-  const Iw = mv(ms.Iorigin, w);
-  const rhsKnown = vsub(
-    u.tauThrO,
-    vadd(IdotOmega(ms, st.sd, st.th1d, st.th2d, w), vcross(w, vadd(Iw, hrel))),
-  );
-  // I α + [0, I2 (t2dd0 − αy), −I1 (t1dd0 + αz)] = rhsKnown
-  // (I + diag(0,I2,I1)) α = rhsKnown − [0, I2 t2dd0, −I1 t1dd0]
-  const rhs: Vec3 = [
-    rhsKnown[0],
-    rhsKnown[1] - ms.Ieq2 * t2dd0,
-    rhsKnown[2] + ms.Ieq1 * t1dd0,
-  ];
-  const A: Mat3 = [
-    [ms.Iorigin[0][0], ms.Iorigin[0][1], ms.Iorigin[0][2]],
-    [ms.Iorigin[1][0], ms.Iorigin[1][1] + ms.Ieq2, ms.Iorigin[1][2]],
-    [ms.Iorigin[2][0], ms.Iorigin[2][1], ms.Iorigin[2][2] + ms.Ieq1],
-  ];
-  const alpha = mv(minv3(A), rhs);
-  const th1dd = t1dd0 + alpha[2];
-  const th2dd = t2dd0 - alpha[1];
-
-  return { aCmI, alpha, sdd, th1dd, th2dd };
+  const x = solveLinear(A, b);
+  return {
+    aCmI,
+    alpha: [x[0]!, x[1]!, x[2]!],
+    sdd: x[3]!,
+    th1dd: x[4]!,
+    th2dd: x[5]!,
+  };
 }
 
 export function originKinematics(st: SimState, ms: MassState): { rI: Vec3; vI: Vec3 } {
   const rCmB_I = qRotate(st.q, ms.rCmB);
   const rI = vsub(st.rCmI, rCmB_I);
-  const e1 = pendulumETheta(st.th1, 1);
-  const e2 = pendulumETheta(st.th2, 2);
-  const rcmd: Vec3 = [
-    (ms.ms * st.sd + ms.m1 * ms.L * st.th1d * e1[0] + ms.m2 * ms.L * st.th2d * e2[0]) / ms.M,
-    (ms.ms * 0 + ms.m1 * ms.L * st.th1d * e1[1] + ms.m2 * ms.L * st.th2d * e2[1]) / ms.M,
-    (ms.ms * 0 + ms.m1 * ms.L * st.th1d * e1[2] + ms.m2 * ms.L * st.th2d * e2[2]) / ms.M,
-  ];
-  const vrelI = qRotate(st.q, vadd(vcross(st.w, ms.rCmB), rcmd));
+  const rd = rcmDot(ms, st.sd, st.th1d, st.th2d, st.th1, st.th2);
+  const vrelI = qRotate(st.q, vadd(vcross(st.w, ms.rCmB), rd));
   const vI = vsub(st.vCmI, vrelI);
   return { rI, vI };
 }
@@ -330,19 +487,19 @@ export function pack(st: SimState): Float64Array {
 }
 
 export function unpack(y: Float64Array, t: number, fuel: number, cfg: PublicConfig): SimState {
-  const q = qnormalize([y[6], y[7], y[8], y[9]]);
+  const q = qnormalize([y[6]!, y[7]!, y[8]!, y[9]!]);
   const st: SimState = {
     t,
-    rCmI: [y[0], y[1], y[2]],
-    vCmI: [y[3], y[4], y[5]],
+    rCmI: [y[0]!, y[1]!, y[2]!],
+    vCmI: [y[3]!, y[4]!, y[5]!],
     q,
-    w: [y[10], y[11], y[12]],
-    s: y[13],
-    sd: y[14],
-    th1: y[15],
-    th1d: y[16],
-    th2: y[17],
-    th2d: y[18],
+    w: [y[10]!, y[11]!, y[12]!],
+    s: y[13]!,
+    sd: y[14]!,
+    th1: y[15]!,
+    th1d: y[16]!,
+    th2: y[17]!,
+    th2d: y[18]!,
     fuel,
     rI: [0, 0, 0],
     vI: [0, 0, 0],
@@ -383,14 +540,21 @@ function deriv(y: Float64Array, cfg: PublicConfig, u: ForceInput, fuel: number):
 
 function axpy(y: Float64Array, k: Float64Array, s: number): Float64Array {
   const z = new Float64Array(N);
-  for (let i = 0; i < N; i++) z[i] = y[i] + s * k[i];
+  for (let i = 0; i < N; i++) z[i] = y[i]! + s * k[i]!;
   return z;
 }
 
-function combine(y: Float64Array, k1: Float64Array, k2: Float64Array, k3: Float64Array, k4: Float64Array, dt: number): Float64Array {
+function combine(
+  y: Float64Array,
+  k1: Float64Array,
+  k2: Float64Array,
+  k3: Float64Array,
+  k4: Float64Array,
+  dt: number,
+): Float64Array {
   const z = new Float64Array(N);
   const s = dt / 6;
-  for (let i = 0; i < N; i++) z[i] = y[i] + s * (k1[i] + 2 * k2[i] + 2 * k3[i] + k4[i]);
+  for (let i = 0; i < N; i++) z[i] = y[i]! + s * (k1[i]! + 2 * k2[i]! + 2 * k3[i]! + k4[i]!);
   return z;
 }
 
@@ -401,12 +565,21 @@ export function rk4Step(st: SimState, cfg: PublicConfig, u: ForceInput, dt: numb
   const k3 = deriv(axpy(y, k2, dt * 0.5), cfg, u, st.fuel);
   const k4 = deriv(axpy(y, k3, dt), cfg, u, st.fuel);
   const yn = combine(y, k1, k2, k3, k4, dt);
-  const qn = qnormalize([yn[6], yn[7], yn[8], yn[9]]);
-  yn[6] = qn[0];
-  yn[7] = qn[1];
-  yn[8] = qn[2];
-  yn[9] = qn[3];
-  return unpack(yn, st.t + dt, st.fuel, cfg);
+  const qRaw: Quat = [yn[6]!, yn[7]!, yn[8]!, yn[9]!];
+  const qn = qnorm(qRaw);
+  const q = qnormalize(qRaw);
+  yn[6] = q[0];
+  yn[7] = q[1];
+  yn[8] = q[2];
+  yn[9] = q[3];
+  const next = unpack(yn, st.t + dt, st.fuel, cfg);
+  (next as SimState & { qNormRaw?: number }).qNormRaw = qn;
+  return next;
+}
+
+export function lastQuaternionNormRaw(st: SimState): number {
+  const extra = st as SimState & { qNormRaw?: number };
+  return extra.qNormRaw ?? qnorm(st.q);
 }
 
 export interface CollisionResult {
@@ -415,13 +588,14 @@ export interface CollisionResult {
   impactSpeed: number;
   impulse: number;
   bound: number;
+  tHit?: number;
+  energyLoss?: number;
+  angularMomentumJump?: number;
 }
 
 /**
- * Inelastic end-stop. Impulse is internal and collocated, so P and H about
- * the inertial origin are conserved by adjusting v_cm (unchanged) and ω so
- * that H_cm is unchanged after ṡ flips. v_cm is invariant because the pair
- * is internal. ω is adjusted to keep H about CM.
+ * Inelastic end-stop. Impulse pair along the rail, collocated, so P and H_cm
+ * are conserved. ṡ′ = −e ṡ; ω is adjusted so H_cm is unchanged.
  */
 export function applyCollision(
   cfg: PublicConfig,
@@ -432,17 +606,12 @@ export function applyCollision(
   const ms = massState(cfg, bound, st.th1, st.th2, st.fuel);
   const sdIn = st.sd;
   const sdOut = -e * sdIn;
-  const hBefore = vadd(mv(ms.Icm, st.w), relativeAM(ms, sdIn, st.th1d, st.th2d));
-  // After: s changes (already at bound), sd flips. h_rel slider about CM:
-  // (r_s − r_cm) × m ṡ e_x . About CM this is m ( [s,0,0]−r_cm ) × [sd,0,0]
-  // which is [0, rcm_z * m * (−sd change), −rcm_y * m * (−sd change)].
-  // Slider relative AM about O is 0; about CM it is not if r_cm has y/z.
+  const Hbefore = vadd(mv(ms.Icm, st.w), hRelCm(ms, sdIn, st.th1d, st.th2d, st.th1, st.th2));
+  const Ebefore = kineticPlusPotential(cfg, { ...st, s: bound }, 0);
+  void Ebefore;
   const rs: Vec3 = [bound, 0, 0];
   const rrel = vsub(rs, ms.rCmB);
   const hRelS = (sd: number) => vscale(vcross(rrel, [sd, 0, 0]), ms.ms);
-  const hAfterTarget = hBefore; // conserve H_cm_B (no external impulse torque about CM if we account for ω)
-  // I ω' + h_rel_other + hRelS(sdOut) = I ω + h_rel_other + hRelS(sdIn)
-  // I (ω' − ω) = hRelS(sdIn) − hRelS(sdOut)
   const dh = vsub(hRelS(sdIn), hRelS(sdOut));
   const dw = mv(minv3(ms.Icm), dh);
   const next: SimState = {
@@ -454,8 +623,20 @@ export function applyCollision(
   const kin = originKinematics(next, massState(cfg, next.s, next.th1, next.th2, next.fuel));
   next.rI = kin.rI;
   next.vI = kin.vI;
+  const Hafter = vadd(
+    mv(ms.Icm, next.w),
+    hRelCm(ms, next.sd, next.th1d, next.th2d, next.th1, next.th2),
+  );
+  const dH = vnorm(vsub(Hafter, Hbefore));
   const J = ms.ms * (sdOut - sdIn);
-  return { state: next, collided: true, impactSpeed: Math.abs(sdIn), impulse: J, bound };
+  return {
+    state: next,
+    collided: true,
+    impactSpeed: Math.abs(sdIn),
+    impulse: J,
+    bound,
+    angularMomentumJump: dH,
+  };
 }
 
 export function integrateWithCollision(
@@ -472,7 +653,6 @@ export function integrateWithCollision(
   if (next.s > max && next.s > s0) bound = max;
   else if (next.s < min && next.s < s0) bound = min;
   if (bound === null) {
-    // Still clip numerically if we sit on the wall pushing out.
     if (next.s > max) {
       return applyCollision(cfg, { ...next, s: max }, max, cfg.restitution);
     }
@@ -483,22 +663,27 @@ export function integrateWithCollision(
   }
   const ds = next.s - s0;
   const frac = clamp((bound - s0) / (ds === 0 ? 1e-12 : ds), 0, 1);
-  const tHit = Math.max(1e-6, frac * dt);
+  const tHit = Math.max(1e-9, frac * dt);
   const atHit = rk4Step(st, cfg, u, tHit);
+  const k12 = u.k12;
+  const Epre = kineticPlusPotential(cfg, { ...atHit, s: bound }, k12);
   const col = applyCollision(cfg, atHit, bound, cfg.restitution);
+  const Epost = kineticPlusPotential(cfg, col.state, k12);
+  col.energyLoss = Epre - Epost;
+  col.tHit = st.t + tHit;
   const remain = dt - tHit;
-  if (remain > 1e-6) {
+  if (remain > 1e-9) {
     const after = rk4Step(col.state, cfg, u, remain);
-    // Prevent re-penetration in the same step.
     if (after.s > max) after.s = max;
     if (after.s < min) after.s = min;
+    if (after.s === max && after.sd > 0) after.sd = 0;
+    if (after.s === min && after.sd < 0) after.sd = 0;
     return { ...col, state: after };
   }
   return col;
 }
 
 export function pressureFromSlosh(th1: number, th2: number): [number, number] {
-  // Gauge-like wall pressures (Pa). Invertible 2×2 in sin θ.
   const p0 = 2500;
   const a = 1800;
   const b = 220;
@@ -516,10 +701,7 @@ export function invertPressure(p1: number, p2: number): [number, number] {
   const det = a * a - b * b;
   const s1 = (a * u - b * v) / det;
   const s2 = (a * v - b * u) / det;
-  return [
-    Math.asin(clamp(s1, -1, 1)),
-    Math.asin(clamp(s2, -1, 1)),
-  ];
+  return [Math.asin(clamp(s1, -1, 1)), Math.asin(clamp(s2, -1, 1))];
 }
 
 export { DRY_MASS, DRY_INERTIA, SLIDER_MASS, TANK_R };

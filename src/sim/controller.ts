@@ -1,7 +1,6 @@
 import {
   attitudeErrorAngle,
   attitudeErrorVector,
-  clamp,
   deg,
   qnormalize,
   vadd,
@@ -12,26 +11,35 @@ import {
   type Vec3,
 } from "./math3d";
 import { Estimator, type Estimate } from "./estimator";
-import { allocateTorque, pulseImpulse, sliderForceCommand, torqueColumns } from "./allocate";
+import { sliderForceCommand, torqueColumns } from "./allocate";
 import { FdirEngine, type FdirSnapshot } from "./fdir";
 import { CTRL_DT, MIN_PULSE } from "./constants";
+import { FUEL_HARD, FUEL_STOP } from "./evalset";
+import { choosePulse, pulseAlongWant, type PlannerOpts } from "./planner";
 import type { Command, Observation, PublicConfig } from "./types";
 
 /**
  * Observation-only GNC. Sees ONLY a serialised Observation. Never holds a
  * Simulator, never reads PrivateScenario, never keys off a wall-clock fault
  * time or a hard-coded thruster identity.
+ *
+ * Large-error law: receding-horizon bang-coast-bang on the short-way
+ * eigenaxis (planner). Inside ~1.55° a finish pulse machine fires min-width
+ * jets. Fuel floor is a constraint, not an objective.
  */
 export class AgentController {
   readonly name: string = "observation";
   readonly estimator: Estimator;
-  private cfg: PublicConfig;
+  protected cfg: PublicConfig;
   readonly fdir = new FdirEngine();
+  protected plannerOpts: PlannerOpts = { horizon: 8, wCap: 0.04, alphaScale: 0.5 };
   private lastCmd: Command = { sliderForce: 0, pulseWidth: [0, 0, 0, 0, 0, 0] };
   private lastW: Vec3 = [0, 0, 0];
   private lastObs: Observation | null = null;
   private Hacc: Vec3 = [0, 0, 0];
   private lastFireT = -1e9;
+  private latched = false;
+  private finishPulseT = -1e9;
 
   constructor(cfg: PublicConfig) {
     this.cfg = cfg;
@@ -99,7 +107,7 @@ export class AgentController {
     return tau;
   }
 
-  private control(
+  protected control(
     t: number,
     est: Estimate,
     probe: { probeId: number; probe: boolean },
@@ -114,170 +122,115 @@ export class AgentController {
     const cols = torqueColumns(this.cfg, est.s, est.th1, est.th2, est.fuel, this.estimator.etaT);
     const isolated = this.fdir.isolated;
 
-    if (probe.probe && this.fdir.detectedFailedThruster < 0 && !isolated.has(probe.probeId)) {
-      pulse[probe.probeId] = CTRL_DT;
-    }
+    const needProbe =
+      probe.probe && this.fdir.detectedFailedThruster < 0 && !isolated.has(probe.probeId);
+    if (needProbe) pulse[probe.probeId] = CTRL_DT;
 
-    const rateOnly = wmag > 0.08;
-    let tauDes: Vec3;
-    if (rateOnly) {
-      tauDes = [
-        -210 * w[0] - 20 * attErr[0],
-        -210 * w[1] - 20 * attErr[1],
-        -210 * w[2] - 20 * attErr[2],
-      ];
-    } else {
-      let KpA: number;
-      let KdA: number;
-      if (attDeg < 4) {
-        KpA = attDeg < 1.5 ? 14 : 24;
-        KdA = 175;
-      } else if (wmag < 0.02) {
-        KpA = attDeg > 6 ? 48 : 36;
-        KdA = 60;
-      } else {
-        KpA = attDeg > 25 ? 28 : 18;
-        KdA = 95;
-      }
-      if (isolated.size > 0 && attDeg < 8) {
-        KpA *= 0.85;
-        KdA *= 1.1;
-      }
-      tauDes = [
-        -KpA * 2 * attErr[0] - KdA * w[0],
-        -KpA * 2 * attErr[1] - KdA * w[1],
-        -KpA * 2 * attErr[2] - KdA * w[2],
-      ];
-    }
+    const eN0mag = vnorm(attErr);
+    const eN0: Vec3 = eN0mag > 1e-9 ? vscale(attErr, 1 / eN0mag) : [1, 0, 0];
+    const wPar0 = vdot(w, eN0);
 
-    if (this.cfg.fluidPresent) {
-      const se = Math.abs(est.th1d) + Math.abs(est.th2d);
-      if (se > 0.15) tauDes = vadd(tauDes, vscale(w, -15));
-    }
+    if (attDeg < 0.92 && wmag < 0.0052 && wPar0 < 0.0012) this.latched = true;
+    if (attDeg > 1.15 || wmag > 0.012 || wPar0 > 0.0035) this.latched = false;
 
     const tGo = Math.max(3, this.cfg.duration - t);
-    const coastDeg = deg(vnorm([
-      2 * attErr[0] + w[0] * Math.min(tGo, 8),
-      2 * attErr[1] + w[1] * Math.min(tGo, 8),
-      2 * attErr[2] + w[2] * Math.min(tGo, 8),
-    ]));
+    const H = Math.min(this.plannerOpts.horizon ?? 8, tGo);
+    const coastDeg = deg(
+      vnorm([
+        2 * attErr[0] + w[0] * H,
+        2 * attErr[1] + w[1] * H,
+        2 * attErr[2] + w[2] * H,
+      ]),
+    );
 
-    if (attDeg < 0.38 && wmag < 0.0018 && coastDeg < 0.8) {
-      this.Hacc = vscale(this.Hacc, 0.8);
+    if (
+      ((this.latched && attDeg < 1.04 && wmag < 0.007 && wPar0 < 0.002) ||
+        (attDeg < 0.90 && wmag < 0.0055 && coastDeg < 0.98 && wPar0 < 0.0012)) &&
+      !needProbe
+    ) {
+      this.Hacc = vscale(this.Hacc, 0.75);
       return { sliderForce: Fs, pulseWidth: pulse };
     }
 
-    const terminal = attDeg < 5 && wmag < 0.035 && !rateOnly;
-    if (terminal) {
-      this.Hacc = vadd(this.Hacc, vscale(tauDes, CTRL_DT));
-      this.Hacc = vscale(this.Hacc, 0.987);
-      const Hn = vnorm(this.Hacc);
-      const minImp = minColImpulse(cols, isolated);
-      const cooling = t - this.lastFireT < this.cfg.commandDelay + MIN_PULSE;
-      if (!cooling && Hn >= 0.42 * minImp) {
-        const alloc = allocateTorque(vscale(this.Hacc, 1 / MIN_PULSE), cols, isolated, {
-          wantNGate: 0.02,
-        });
-        const use = alloc.ids.length === 0
-          ? alignAllocate(this.Hacc, cols, isolated, MIN_PULSE, true)
-          : alloc.pulse;
-        const delivered = pulseImpulse(cols, use);
-        const dN = vnorm(delivered);
-        const align = dN > 1e-9 && Hn > 1e-9 ? vdot(delivered, this.Hacc) / (dN * Hn) : 0;
-        if (dN > 1e-9 && align >= 0.22) {
-          for (let i = 0; i < 6; i++) if (use[i]) pulse[i] = use[i]!;
-          this.Hacc = vsub(this.Hacc, delivered);
-          this.lastFireT = t;
-        }
+    const fuelPanic = est.fuel < FUEL_STOP;
+    if (fuelPanic && !needProbe) {
+      const lastChance =
+        attDeg > 1.15 && attDeg < 8 && wmag < 0.035 && est.fuel > FUEL_HARD + 0.03;
+      if (!lastChance) {
+        this.Hacc = vscale(this.Hacc, 0.7);
+        return { sliderForce: Fs, pulseWidth: pulse };
+      }
+      const cooling = t - this.lastFireT < this.cfg.commandDelay + 0.4 * MIN_PULSE;
+      if (!cooling && wPar0 > -0.01 && attDeg > 1.15) {
+        const use = pulseAlongWant(vscale(eN0, -1), cols, isolated, MIN_PULSE, 1);
+        for (let i = 0; i < 6; i++) pulse[i] = use[i] ?? 0;
+        if (pulse.some((p) => p > 0)) this.lastFireT = t;
       }
       return { sliderForce: Fs, pulseWidth: pulse };
     }
 
-    const acq = alignAllocate(tauDes, cols, isolated, CTRL_DT, false);
-    for (let i = 0; i < 6; i++) pulse[i] = acq[i] ?? 0;
-    if (probe.probe && this.fdir.detectedFailedThruster < 0 && !isolated.has(probe.probeId)) {
-      if ((pulse[probe.probeId] ?? 0) === 0) {
-        const on = [0, 1, 2, 3, 4, 5].filter((i) => pulse[i]! > 0);
+    const slew = attDeg > 1.55 || wmag > 0.04 || wPar0 > 0.008;
+    if (slew) {
+      const planned = choosePulse(this.cfg, est, isolated, t, {
+        ...this.plannerOpts,
+        lastFireT: this.lastFireT,
+      });
+      for (let i = 0; i < 6; i++) pulse[i] = planned[i] ?? 0;
+      if (needProbe) {
+        const on = [0, 1, 2, 3, 4, 5].filter((i) => (pulse[i] ?? 0) > 0);
         if (on.length >= 2) {
-          on.sort((a, b) => pulse[a]! - pulse[b]!);
+          on.sort((a, b) => (pulse[a] ?? 0) - (pulse[b] ?? 0));
           pulse[on[0]!] = 0;
         }
         pulse[probe.probeId] = CTRL_DT;
       }
+      if (pulse.some((p) => p > 0)) this.lastFireT = t;
+      return { sliderForce: Fs, pulseWidth: pulse };
     }
-    if (pulse.some((p) => p > 0)) this.lastFireT = t;
-    const delivered = pulseImpulse(cols, pulse);
-    this.Hacc = vadd(vscale(this.Hacc, 0.5), vsub(vscale(tauDes, CTRL_DT), delivered));
-    return { sliderForce: Fs, pulseWidth: pulse };
-  }
-}
 
-function minColImpulse(cols: Vec3[], isolated: Set<number>): number {
-  let m = Infinity;
-  for (let i = 0; i < cols.length; i++) {
-    if (isolated.has(i)) continue;
-    const n = vnorm(cols[i]!) * MIN_PULSE;
-    if (n > 1e-9 && n < m) m = n;
-  }
-  return Number.isFinite(m) ? m : 0.6;
-}
+    const eNmag = vnorm(attErr);
+    const eN: Vec3 = eNmag > 1e-9 ? vscale(attErr, 1 / eNmag) : [1, 0, 0];
+    const wParNow = vdot(w, eN);
+    const wPerp = vsub(w, vscale(eN, wParNow));
+    const wPerpN = vnorm(wPerp);
+    const cooling = t - this.lastFireT < this.cfg.commandDelay + 0.4 * MIN_PULSE;
 
-/** Alignment-based 1–2 jet allocator (same-duty pair). Saturates for detumble. */
-function alignAllocate(
-  tauDes: Vec3,
-  cols: Vec3[],
-  isolated: Set<number>,
-  maxWidth: number,
-  minOnly: boolean,
-  preferSingle = false,
-): [number, number, number, number, number, number] {
-  const pulse: [number, number, number, number, number, number] = [0, 0, 0, 0, 0, 0];
-  const wantN = vnorm(tauDes);
-  if (wantN < 0.15 && !minOnly) return pulse;
-
-  type Cand = { ids: number[]; tau: Vec3; align: number };
-  const cands: Cand[] = [];
-  const push = (ids: number[], tau: Vec3) => {
-    const n = vnorm(tau);
-    if (n < 1e-6) return;
-    cands.push({ ids, tau, align: vdot(tau, tauDes) / n });
-  };
-  for (let i = 0; i < 6; i++) {
-    if (isolated.has(i)) continue;
-    push([i], cols[i]!);
-    if (minOnly || preferSingle) continue;
-    for (let j = i + 1; j < 6; j++) {
-      if (isolated.has(j)) continue;
-      push([i, j], vadd(cols[i]!, cols[j]!));
-    }
-  }
-  if (preferSingle && !minOnly) {
-    for (let i = 0; i < 6; i++) {
-      if (isolated.has(i)) continue;
-      for (let j = i + 1; j < 6; j++) {
-        if (isolated.has(j)) continue;
-        push([i, j], vadd(cols[i]!, cols[j]!));
+    if (!cooling) {
+      if (wParNow > 0.0014 && attDeg > 0.7) {
+        const width = wParNow > 0.004 ? 2 * MIN_PULSE : MIN_PULSE;
+        const use = pulseAlongWant(vscale(eN, -1), cols, isolated, width, 1);
+        for (let i = 0; i < 6; i++) pulse[i] = use[i] ?? 0;
+        if (pulse.some((p) => p > 0)) this.lastFireT = t;
+      } else if (wPerpN > 0.006 && attDeg > 0.7) {
+        const use = pulseAlongWant(vscale(wPerp, -1), cols, isolated, MIN_PULSE, 1);
+        for (let i = 0; i < 6; i++) pulse[i] = use[i] ?? 0;
+        if (pulse.some((p) => p > 0)) this.lastFireT = t;
+      } else if (wParNow < -0.009 && attDeg < 1.4) {
+        const use = pulseAlongWant(eN, cols, isolated, MIN_PULSE, 1);
+        for (let i = 0; i < 6; i++) pulse[i] = use[i] ?? 0;
+        if (pulse.some((p) => p > 0)) this.lastFireT = t;
+      } else if (
+        attDeg > 0.95 &&
+        wmag <= 0.003 &&
+        t - this.finishPulseT > 1.6 &&
+        est.fuel >= FUEL_STOP - 0.04
+      ) {
+        const use = pulseAlongWant(vscale(eN, -1), cols, isolated, MIN_PULSE, 1);
+        for (let i = 0; i < 6; i++) pulse[i] = use[i] ?? 0;
+        if (pulse.some((p) => p > 0)) {
+          this.lastFireT = t;
+          this.finishPulseT = t;
+        }
       }
     }
+    if (needProbe) {
+      const on = [0, 1, 2, 3, 4, 5].filter((i) => (pulse[i] ?? 0) > 0);
+      if (on.length >= 2) {
+        on.sort((a, b) => (pulse[a] ?? 0) - (pulse[b] ?? 0));
+        pulse[on[0]!] = 0;
+      }
+      pulse[probe.probeId] = CTRL_DT;
+    }
+    return { sliderForce: Fs, pulseWidth: pulse };
   }
-  cands.sort((a, b) => {
-    const bonus = (c: Cand) => (preferSingle && c.ids.length === 1 ? 0.15 : 0);
-    return b.align + bonus(b) - (a.align + bonus(a));
-  });
-  const best = cands[0];
-  if (!best || best.align < 0.02) return pulse;
-  if (minOnly) {
-    pulse[best.ids[0]!] = MIN_PULSE;
-    return pulse;
-  }
-  const mag = vnorm(best.tau);
-  let duty = clamp(wantN / mag, 0, 1);
-  if (wantN < 8) duty = Math.min(duty, 0.7);
-  if (duty * CTRL_DT < MIN_PULSE) {
-    if (wantN > 0.5) duty = MIN_PULSE / CTRL_DT;
-    else return pulse;
-  }
-  const width = Math.min(maxWidth, duty * CTRL_DT);
-  for (const id of best.ids) pulse[id] = width;
-  return pulse;
 }

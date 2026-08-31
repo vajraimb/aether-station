@@ -1,0 +1,104 @@
+{
+  "seeds": [
+    800000,
+    800017,
+    800034,
+    800051
+  ],
+  "truthFeedback": [
+    {
+      "att": 7.702236183085482,
+      "fuel": 2.9285655974135762,
+      "omega": 0.002130718165360039
+    },
+    {
+      "att": 64.07735677568998,
+      "fuel": 2.9292271130265575,
+      "omega": 0.0170417320155553
+    },
+    {
+      "att": 98.74446894632253,
+      "fuel": 2.936292531135511,
+      "omega": 0.023052434128917894
+    },
+    {
+      "att": 25.461693170875904,
+      "fuel": 2.8295796888450697,
+      "omega": 0.0065050428802235
+    }
+  ],
+  "offline": [
+    {
+      "att": 1.116809579036412,
+      "fuel": 3.0035224478714415,
+      "omega": 0.001857344851006349,
+      "restart": {
+        "wCap": 0.11,
+        "alphaScale": 0.7,
+        "horizon": 10
+      }
+    },
+    {
+      "att": 38.7193373608222,
+      "fuel": 2.917434556722673,
+      "omega": 0.05752544074203341,
+      "restart": {
+        "wCap": 0.11,
+        "alphaScale": 0.7,
+        "horizon": 10
+      }
+    },
+    {
+      "att": 11.693488288459914,
+      "fuel": 2.837322319415595,
+      "omega": 0.0026053021493766503,
+      "restart": {
+        "wCap": 0.09,
+        "alphaScale": 0.55,
+        "horizon": 8
+      }
+    },
+    {
+      "att": 31.850013975886167,
+      "fuel": 2.936523564983783,
+      "omega": 0.004051811265567703,
+      "restart": {
+        "wCap": 0.09,
+        "alphaScale": 0.55,
+        "horizon": 8
+      }
+    }
+  ],
+  "minReachableAttDeg": 1.116809579036412,
+  "fuelToReach1deg": null,
+  "bestAttAtFuelFloor": 1.116809579036412,
+  "restarts": 5,
+  "restartGrid": [
+    {
+      "wCap": 0.09,
+      "alphaScale": 0.55,
+      "horizon": 8
+    },
+    {
+      "wCap": 0.11,
+      "alphaScale": 0.7,
+      "horizon": 10
+    },
+    {
+      "wCap": 0.08,
+      "alphaScale": 0.45,
+      "horizon": 12
+    },
+    {
+      "wCap": 0.13,
+      "alphaScale": 0.85,
+      "horizon": 8
+    },
+    {
+      "wCap": 0.1,
+      "alphaScale": 0.6,
+      "horizon": 15
+    }
+  ],
+  "note": "Offline search = truth-fed receding-horizon mixed pulse planner with 5 restarts of (wCap, α-scale, horizon). Plant, delay, min-pulse, max-two and fuel floor are enforced. Flight controller does not import this module."
+}

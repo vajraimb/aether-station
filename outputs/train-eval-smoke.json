@@ -1,0 +1,160 @@
+{
+  "set": "train",
+  "count": 10,
+  "elapsed_ms": 12180,
+  "controller": "observation",
+  "rates": {
+    "allGates": 0,
+    "attitude": 0,
+    "rate": 0.7,
+    "fuel": 1,
+    "param": 0.5,
+    "fdir": 1
+  },
+  "targets": {
+    "allGates": 0.8,
+    "attitude": 0.9,
+    "fuel": 0.9,
+    "fdir": 0.95,
+    "param": 0.8
+  },
+  "pass": {
+    "allGates": false,
+    "attitude": false,
+    "fuel": true,
+    "fdir": true,
+    "param": false
+  },
+  "rows": [
+    {
+      "seed": 800000,
+      "faultTime": 93.15644436981529,
+      "faultThruster": 4,
+      "att": 36.89664299349374,
+      "w": 0.00765802682392706,
+      "fuel": 3.351562684775895,
+      "param": 0.10322018805662739,
+      "isolationDelay": 1.0485556301715206,
+      "isolated": 4,
+      "isolationOk": 1,
+      "scorecardPass": false
+    },
+    {
+      "seed": 800017,
+      "faultTime": 79.91050987737253,
+      "faultThruster": 3,
+      "att": 17.30839236494792,
+      "w": 0.003522783410289432,
+      "fuel": 3.135243071655114,
+      "param": 0.10715397057821345,
+      "isolationDelay": 2.0944901226253734,
+      "isolated": 3,
+      "isolationOk": 1,
+      "scorecardPass": false
+    },
+    {
+      "seed": 800034,
+      "faultTime": 66.42021628445946,
+      "faultThruster": 0,
+      "att": 140.27104121737548,
+      "w": 0.03501768193761081,
+      "fuel": 3.8754892310136406,
+      "param": 0.14344547810148767,
+      "isolationDelay": 1.179783715551551,
+      "isolated": 0,
+      "isolationOk": 1,
+      "scorecardPass": false
+    },
+    {
+      "seed": 800051,
+      "faultTime": 57.23702328745276,
+      "faultThruster": 3,
+      "att": 46.10611993598463,
+      "w": 0.008685908925547782,
+      "fuel": 3.2366198942666258,
+      "param": 0.3207372120431536,
+      "isolationDelay": 2.062976712559127,
+      "isolated": 3,
+      "isolationOk": 1,
+      "scorecardPass": false
+    },
+    {
+      "seed": 800068,
+      "faultTime": 69.62443306460045,
+      "faultThruster": 5,
+      "att": 1.6332464015245562,
+      "w": 0.0016394003632644633,
+      "fuel": 3.162294329231437,
+      "param": 0.17434811490577867,
+      "isolationDelay": 2.475566935406462,
+      "isolated": 5,
+      "isolationOk": 1,
+      "scorecardPass": false
+    },
+    {
+      "seed": 800085,
+      "faultTime": 87.52405885607004,
+      "faultThruster": 3,
+      "att": 38.10535541537496,
+      "w": 0.006763770700699853,
+      "fuel": 3.462860905321194,
+      "param": 0.12027473614595886,
+      "isolationDelay": 0.28094114392258973,
+      "isolated": 3,
+      "isolationOk": 1,
+      "scorecardPass": false
+    },
+    {
+      "seed": 800102,
+      "faultTime": 73.22405310580507,
+      "faultThruster": 3,
+      "att": 1.4407181769333048,
+      "w": 0.0014876279174904502,
+      "fuel": 3.5363466439370153,
+      "param": 0.22684470085070288,
+      "isolationDelay": 2.0759468941989354,
+      "isolated": 3,
+      "isolationOk": 1,
+      "scorecardPass": false
+    },
+    {
+      "seed": 800119,
+      "faultTime": 56.59081413410604,
+      "faultThruster": 5,
+      "att": 61.15497096480637,
+      "w": 0.00836602816238042,
+      "fuel": 3.401081538476191,
+      "param": 0.22419734548308412,
+      "isolationDelay": 2.409185865905691,
+      "isolated": 5,
+      "isolationOk": 1,
+      "scorecardPass": false
+    },
+    {
+      "seed": 800136,
+      "faultTime": 81.91827240283601,
+      "faultThruster": 0,
+      "att": 10.468522442844952,
+      "w": 0.00224672004410896,
+      "fuel": 2.8609769576097817,
+      "param": 0.24838838847469835,
+      "isolationDelay": 1.4867275971606233,
+      "isolated": 0,
+      "isolationOk": 1,
+      "scorecardPass": false
+    },
+    {
+      "seed": 800153,
+      "faultTime": 107.18571036006324,
+      "faultThruster": 1,
+      "att": 12.654164133698693,
+      "w": 0.005047932727833616,
+      "fuel": 3.324858427941967,
+      "param": 0.08322601927060762,
+      "isolationDelay": 0.7192896399111106,
+      "isolated": 1,
+      "isolationOk": 1,
+      "scorecardPass": false
+    }
+  ]
+}

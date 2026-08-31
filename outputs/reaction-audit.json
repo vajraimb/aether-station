@@ -1,0 +1,12 @@
+{
+  "sliderNetForce": 0,
+  "sliderNetTorqueCm": 1.4431191183625389e-8,
+  "slosh1NetForce": 0,
+  "slosh1NetTorqueCm": 0,
+  "slosh2NetForce": 0,
+  "slosh2NetTorqueCm": 1.3684236054111823e-14,
+  "dHdtResidual": 7.32410687763558e-9,
+  "dEdtResidualConservative": 9.769962616701378e-9,
+  "dEdtResidualDamped": 6.869157199718146e-7,
+  "dEdtResidualActuated": 0.00013942516210363465
+}

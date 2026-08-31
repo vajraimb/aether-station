@@ -47,13 +47,17 @@ export class FdirEngine {
     const t = obs.timestamp;
     const delay = cfg.commandDelay;
     const shouldOn = [false, false, false, false, false, false];
+    const duty = [0, 0, 0, 0, 0, 0];
     for (const c of this.cmdHistory) {
       for (let i = 0; i < 6; i++) {
         const w = c.pulse[i] ?? 0;
         if (w <= 0) continue;
         const tOn = c.t + delay;
         const tOff = tOn + w;
-        if (t >= tOn && t < tOff) shouldOn[i] = true;
+        if (t >= tOn && t < tOff) {
+          shouldOn[i] = true;
+          duty[i] += w;
+        }
       }
     }
 
@@ -61,16 +65,22 @@ export class FdirEngine {
       this.abnormalFlagTime = t;
     }
 
+    let nShould = 0;
+    for (let i = 0; i < 6; i++) if (shouldOn[i]) nShould += 1;
+    // Residuals are unambiguous only when at most two jets were requested —
+    // the plant drops extras, which would look like a false fail.
+    const residualOk = nShould > 0 && nShould <= 2;
+
     for (let i = 0; i < 6; i++) {
       const curr = obs.thrusterCurrentFeedback[i] ?? 0;
-      if (shouldOn[i] && curr < 0.22) {
-        this.faultConfidence[i] = clamp(this.faultConfidence[i] + 0.40, 0, 1);
+      if (residualOk && shouldOn[i] && curr < 0.22) {
+        this.faultConfidence[i] = clamp(this.faultConfidence[i] + 0.38, 0, 1);
         this.healthy.delete(i);
-      } else if (shouldOn[i] && curr > 0.5) {
-        this.faultConfidence[i] = clamp(this.faultConfidence[i] - 0.22, 0, 1);
+      } else if (residualOk && shouldOn[i] && curr > 0.5) {
+        this.faultConfidence[i] = clamp(this.faultConfidence[i] - 0.28, 0, 1);
         this.healthy.add(i);
       } else if (!obs.actuatorResponseAbnormal) {
-        this.faultConfidence[i] = clamp(this.faultConfidence[i] * 0.92, 0, 1);
+        this.faultConfidence[i] = clamp(this.faultConfidence[i] * 0.9, 0, 1);
       }
     }
 
@@ -82,8 +92,9 @@ export class FdirEngine {
     let probeId = this.probeId;
     if (this.detectedFailedThruster < 0) {
       let best = -1;
-      let bestC = obs.actuatorResponseAbnormal ? 0.42 : 0.97;
+      let bestC = obs.actuatorResponseAbnormal ? 0.52 : 0.97;
       for (let i = 0; i < 6; i++) {
+        if (this.healthy.has(i)) continue;
         if (this.faultConfidence[i] > bestC) {
           bestC = this.faultConfidence[i];
           best = i;
@@ -101,7 +112,7 @@ export class FdirEngine {
           if (this.isolated.has(id)) continue;
           probeId = id;
           this.probeId = (id + 1) % 6;
-          this.probeUntil = t + 0.22;
+          this.probeUntil = t + 0.16;
           probe = true;
           break;
         }

@@ -1,24 +1,140 @@
 {
-  "dt": 0.005,
-  "duration": 2,
-  "energyDrift": -0.6123240431299317,
-  "energyRel": 0.0799000295648144,
-  "angularMomentumDrift": 2.1439360605061255,
-  "angularMomentumRel": 0.02507249924943561,
-  "linearMomentumDrift": 0,
-  "quaternionNormMax": 2.220446049250313e-16,
-  "collisionTime": null,
-  "collisionSpeed": null,
-  "qFinal": [
-    0.8775160050873612,
-    0.2979504306941286,
-    -0.26614566233996273,
-    0.2652502367243506
-  ],
-  "wFinal": [
-    0.08285709881144886,
-    -0.04313389997649452,
-    0.04708202405802481
-  ],
-  "sFinal": 0.7059353059233128
+  "duration": 180,
+  "dts": [
+    {
+      "dt": 0.01,
+      "energyRel": 6.815567544093029e-9,
+      "angularMomentumRel": 7.697312507389626e-12,
+      "linearMomentumAbs": 0,
+      "energy0": {
+        "translational": 0,
+        "rotational": 0.7980118502052994,
+        "gyrostat": -0.0022590521607049443,
+        "relative": 0.05662085538758864,
+        "sloshPotential": 1.2194527416549212,
+        "couplingPotential": 0.4011038607414718,
+        "total": 2.472930255828576
+      },
+      "energy1": {
+        "translational": 0,
+        "rotational": 0.9031902516838411,
+        "gyrostat": -0.2240438917518253,
+        "relative": 1.2926493498310436,
+        "sloshPotential": 0.4311746080452638,
+        "couplingPotential": 0.06995992116582916,
+        "total": 2.4729302389741528
+      },
+      "collided": false,
+      "maxSlider": 0.9787354939189176,
+      "qNormRawMax": 1.2212453270876722e-15
+    },
+    {
+      "dt": 0.005,
+      "energyRel": 2.123957399824911e-10,
+      "angularMomentumRel": 3.9818497459376624e-13,
+      "linearMomentumAbs": 0,
+      "energy0": {
+        "translational": 0,
+        "rotational": 0.7980118502052994,
+        "gyrostat": -0.0022590521607049443,
+        "relative": 0.05662085538758864,
+        "sloshPotential": 1.2194527416549212,
+        "couplingPotential": 0.4011038607414718,
+        "total": 2.472930255828576
+      },
+      "energy1": {
+        "translational": 0,
+        "rotational": 0.9031902572059655,
+        "gyrostat": -0.22404390396377719,
+        "relative": 1.2926494240583164,
+        "sloshPotential": 0.4311744853868839,
+        "couplingPotential": 0.06995999261594771,
+        "total": 2.472930255303336
+      },
+      "collided": false,
+      "maxSlider": 0.9787355016433561,
+      "qNormRawMax": 4.440892098500626e-16
+    },
+    {
+      "dt": 0.0025,
+      "energyRel": 6.583767808712931e-12,
+      "angularMomentumRel": 4.804409478919832e-13,
+      "linearMomentumAbs": 0,
+      "energy0": {
+        "translational": 0,
+        "rotational": 0.7980118502052994,
+        "gyrostat": -0.0022590521607049443,
+        "relative": 0.05662085538758864,
+        "sloshPotential": 1.2194527416549212,
+        "couplingPotential": 0.4011038607414718,
+        "total": 2.472930255828576
+      },
+      "energy1": {
+        "translational": 0,
+        "rotational": 0.9031902575124013,
+        "gyrostat": -0.22404390464230173,
+        "relative": 1.2926494281997243,
+        "sloshPotential": 0.4311744776553574,
+        "couplingPotential": 0.06995999708711345,
+        "total": 2.4729302558122948
+      },
+      "collided": false,
+      "maxSlider": 0.9787355020072223,
+      "qNormRawMax": 4.440892098500626e-16
+    },
+    {
+      "dt": 0.00125,
+      "energyRel": 2.0418264138635652e-13,
+      "angularMomentumRel": 9.711092659468786e-13,
+      "linearMomentumAbs": 0,
+      "energy0": {
+        "translational": 0,
+        "rotational": 0.7980118502052994,
+        "gyrostat": -0.0022590521607049443,
+        "relative": 0.05662085538758864,
+        "sloshPotential": 1.2194527416549212,
+        "couplingPotential": 0.4011038607414718,
+        "total": 2.472930255828576
+      },
+      "energy1": {
+        "translational": 0,
+        "rotational": 0.9031902575303398,
+        "gyrostat": -0.22404390468204807,
+        "relative": 1.2926494284429413,
+        "sloshPotential": 0.4311744771701216,
+        "couplingPotential": 0.06995999736671654,
+        "total": 2.472930255828071
+      },
+      "collided": false,
+      "maxSlider": 0.9787355020263321,
+      "qNormRawMax": 4.440892098500626e-16
+    },
+    {
+      "dt": 0.000625,
+      "energyRel": 4.471545972313348e-14,
+      "angularMomentumRel": 1.9221832229776064e-12,
+      "linearMomentumAbs": 0,
+      "energy0": {
+        "translational": 0,
+        "rotational": 0.7980118502052994,
+        "gyrostat": -0.0022590521607049443,
+        "relative": 0.05662085538758864,
+        "sloshPotential": 1.2194527416549212,
+        "couplingPotential": 0.4011038607414718,
+        "total": 2.472930255828576
+      },
+      "energy1": {
+        "translational": 0,
+        "rotational": 0.9031902575314559,
+        "gyrostat": -0.2240439046844544,
+        "relative": 1.2926494284577452,
+        "sloshPotential": 0.43117447713974155,
+        "couplingPotential": 0.0699599973841983,
+        "total": 2.4729302558286865
+      },
+      "collided": false,
+      "maxSlider": 0.9787355020274582,
+      "qNormRawMax": 4.440892098500626e-16
+    }
+  ]
 }

@@ -1,18 +1,21 @@
 /**
- * Oracle controller. Reads the true SimState (attitude, rate, slider, slosh)
- * but still obeys every actuator constraint. Same allocation / FDIR as the
- * observation-only agent; only the state used for the control law is truth.
+ * Truth-feedback baseline. Reads the true SimState (attitude, rate, slider,
+ * slosh) but still obeys every actuator constraint. Same receding-horizon
+ * allocator as the observation-only agent; only the state fed to the law is
+ * truth. This is NOT an offline pulse-sequence optimizer.
  */
 import { AgentController } from "./controller";
 import type { Estimate } from "./estimator";
+import type { PlannerOpts } from "./planner";
 import type { PublicConfig, SimState } from "./types";
 
-export class OracleController extends AgentController {
-  override readonly name = "oracle";
+export class TruthFeedbackBaseline extends AgentController {
+  override readonly name = "truthFeedbackBaseline";
   private truth: SimState | null = null;
 
-  constructor(cfg: PublicConfig) {
+  constructor(cfg: PublicConfig, plannerOpts?: PlannerOpts) {
     super(cfg);
+    if (plannerOpts) this.plannerOpts = { ...this.plannerOpts, ...plannerOpts };
   }
 
   ingestTruth(state: SimState) {
@@ -49,6 +52,9 @@ export class OracleController extends AgentController {
     return this.getEstimate();
   }
 }
+
+/** @deprecated Use TruthFeedbackBaseline. Kept as an alias. */
+export const OracleController = TruthFeedbackBaseline;
 
 export type AnyController = {
   name: string;

@@ -2,12 +2,13 @@
 /**
  * Physics + isolation contract tests. Headless.
  *   npm run test:physics
+ *   npm run test:physics -- --full   # 180 s at every dt
  */
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { runAllTests } from "../tests.ts";
-import { runConservation, runConvergence } from "../numerics.ts";
+import { runCollision, runReactionAudit, runSmooth, writeLedgers, observedOrder } from "../audit.ts";
 import { writeJson } from "../io.ts";
 import { fdirFromEvents } from "../scoring.ts";
 import { Simulator } from "../simulator.ts";
@@ -19,6 +20,7 @@ import { makeRng } from "../math3d.ts";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const simDir = join(here, "..");
+const full = process.argv.includes("--full");
 
 interface T {
   name: string;
@@ -36,7 +38,6 @@ for (const r of unit) {
   console.log(`${r.pass ? "PASS" : "FAIL"}  ${r.name}  ${r.detail}`);
 }
 
-// --- source contract: no 73.4 s / fixed +Y branch in the controller path ---
 function walk(dir: string, acc: string[] = []): string[] {
   for (const name of readdirSync(dir)) {
     const p = join(dir, name);
@@ -46,8 +47,9 @@ function walk(dir: string, acc: string[] = []): string[] {
   }
   return acc;
 }
+void walk;
 
-const ctrlFiles = ["controller.ts", "allocate.ts", "fdir.ts", "estimator.ts"].map((f) => join(simDir, f));
+const ctrlFiles = ["controller.ts", "allocate.ts", "fdir.ts", "estimator.ts", "planner.ts"].map((f) => join(simDir, f));
 for (const f of ctrlFiles) {
   const src = readFileSync(f, "utf8");
   const banned = [];
@@ -103,7 +105,6 @@ try {
   check("observation_proxy_no_truth", false, String(e));
 }
 
-// Randomised FDIR: fault time and thruster drawn independently of 73.4 / +Y.
 function fdirCase(seed: number): PrivateScenario {
   const rng = makeRng(seed);
   return {
@@ -145,7 +146,6 @@ for (let i = 0; i < fdirN; i++) {
 }
 check("random_fdir_all", fdirOk === fdirN, `${fdirOk}/${fdirN}`);
 
-// Isolation delay definition: 74.4 − 73.4 = 1.0, never 0.001.
 {
   const events: SimEvent[] = [
     { t: 0, type: "scenario", data: { faultTime: 73.4, faultThruster: 2 } },
@@ -162,19 +162,94 @@ check("random_fdir_all", fdirOk === fdirN, `${fdirOk}/${fdirN}`);
   );
 }
 
-const cons = runConservation(2);
-writeJson("outputs/conservation.json", cons);
-check("conservation_energy", cons.energyRel < 0.08, `relΔE=${cons.energyRel.toExponential(2)}`);
-check("conservation_H", cons.angularMomentumRel < 0.05, `relΔH=${cons.angularMomentumRel.toExponential(2)}`);
-check("conservation_q", cons.quaternionNormMax < 1e-6, `|q|-1=${cons.quaternionNormMax.toExponential(2)}`);
+const dts = [0.01, 0.005, 0.0025, 0.00125, 0.000625];
+const orderDur = 4;
+const orderRuns = dts.map((dt) => runSmooth(dt, orderDur, true));
+const ref = orderRuns[orderRuns.length - 1]!;
+const errors = orderRuns.map((r) => {
+  if (r.dt === ref.dt) return 0;
+  const dq = Math.hypot(r.qFinal[1]! - ref.qFinal[1]!, r.qFinal[2]! - ref.qFinal[2]!, r.qFinal[3]! - ref.qFinal[3]!);
+  const dw = Math.hypot(r.wFinal[0]! - ref.wFinal[0]!, r.wFinal[1]! - ref.wFinal[1]!, r.wFinal[2]! - ref.wFinal[2]!);
+  return dq + dw + Math.abs(r.sFinal - ref.sFinal);
+});
+const orders: number[] = [];
+for (let i = 0; i < errors.length - 2; i++) orders.push(observedOrder(errors[i]!, errors[i + 1]!));
+const minOrder = Math.min(...orders.filter((x) => Number.isFinite(x)));
+check("rk4_observed_order", minOrder >= 3.7, `p=${orders.map((x) => x.toFixed(2)).join(",")} min=${minOrder.toFixed(2)}`);
 
-const conv = runConvergence(0.8);
-writeJson("outputs/convergence.json", conv);
-check(
-  "convergence_recorded",
-  Number.isFinite(conv["trajectoryDiff_5ms_vs_1.25ms"]) && conv.collisionTime["5ms"] !== null,
-  `order≈${conv.observedOrder_trajectory_coarse_to_mid?.toFixed(2)} dTcol=${conv.collisionTime.delta_5_vs_1_25?.toExponential(2)}`,
+const longDts = full ? dts : [0.01, 0.005];
+const longRuns = longDts.map((dt) => runSmooth(dt, 180));
+writeJson("outputs/conservation.json", {
+  duration: 180,
+  dts: longRuns.map((r) => ({
+    dt: r.dt,
+    energyRel: r.energyRel,
+    angularMomentumRel: r.angularMomentumRel,
+    linearMomentumAbs: r.linearMomentumAbs,
+    energy0: r.energy0,
+    energy1: r.energy1,
+    collided: r.collided,
+    maxSlider: r.maxSlider,
+    qNormRawMax: r.qNormRawMax,
+  })),
+});
+for (const r of longRuns) {
+  check(
+    `smooth_180s_dt_${r.dt * 1000}ms`,
+    r.energyRel < 1e-4 && r.angularMomentumRel < 1e-4 && !r.collided,
+    `relE=${r.energyRel.toExponential(2)} relH=${r.angularMomentumRel.toExponential(2)} |s|max=${r.maxSlider.toFixed(3)} |q|-1=${r.qNormRawMax.toExponential(2)}`,
+  );
+}
+
+writeJson("outputs/convergence.json", {
+  duration: orderDur,
+  dts,
+  errors,
+  orders,
+  minObservedOrder: minOrder,
+  energyRel: Object.fromEntries(orderRuns.map((r) => [String(r.dt), r.energyRel])),
+  angularMomentumRel: Object.fromEntries(orderRuns.map((r) => [String(r.dt), r.angularMomentumRel])),
+});
+
+const cols = dts.map((dt) => runCollision(dt, 0.5));
+writeJson(
+  "outputs/collision-audit.json",
+  cols,
 );
+const tHits = cols.map((c) => c.tHit ?? NaN);
+const tSpan = Math.abs(tHits[0]! - tHits[tHits.length - 1]!);
+check(
+  "collision_event_time_converges",
+  tSpan < 5e-5 && cols.every((c) => c.tHit !== null),
+  `tHit ${tHits[0]?.toFixed(6)} → ${tHits[tHits.length - 1]?.toFixed(6)} span=${tSpan.toExponential(2)}`,
+);
+check(
+  "collision_no_penetration",
+  cols.every((c) => !c.penetrated),
+  `sMax=${Math.max(...cols.map((c) => c.sMax)).toFixed(4)}`,
+);
+check(
+  "collision_H_conserved",
+  cols.every((c) => c.HrelJump < 1e-8),
+  `max |ΔH|=${Math.max(...cols.map((c) => c.HrelJump)).toExponential(2)}`,
+);
+check(
+  "collision_energy_loss_positive",
+  cols.every((c) => c.energyLoss > 0),
+  `ΔE=${cols[1]!.energyLoss.toFixed(3)} naive=${cols[1]!.naiveLoss.toFixed(3)} (e=0.15)`,
+);
+
+const rx = runReactionAudit();
+writeJson("outputs/reaction-audit.json", rx);
+check("reaction_slider_Fext", rx.sliderNetForce < 1e-6, `F=${rx.sliderNetForce.toExponential(2)}`);
+check("reaction_slosh_Fext", rx.slosh1NetForce < 1e-6 && rx.slosh2NetForce < 1e-6, `F1=${rx.slosh1NetForce} F2=${rx.slosh2NetForce}`);
+check("reaction_dHdt", rx.dHdtResidual < 1e-6 && rx.sliderNetTorqueCm < 1e-6, `dH=${rx.dHdtResidual.toExponential(2)}`);
+check(
+  "reaction_dEdt",
+  rx.dEdtResidualConservative < 1e-6 && rx.dEdtResidualDamped < 1e-3 && rx.dEdtResidualActuated < 2e-3,
+  `cons=${rx.dEdtResidualConservative.toExponential(2)} damp=${rx.dEdtResidualDamped.toExponential(2)} act=${rx.dEdtResidualActuated.toExponential(2)}`,
+);
+writeLedgers(8, 0.005);
 
 const all = [...unit, ...extra];
 const fail = all.filter((t) => !t.pass).length;

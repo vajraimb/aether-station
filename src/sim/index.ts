@@ -16,3 +16,6 @@ export * from "./scoring";
 export * from "./tests";
 export * from "./reachability";
 export * from "./numerics";
+export * from "./planner";
+export * from "./evalset";
+export { runOfflineOptimizer, OfflinePulseController } from "./optimizer";

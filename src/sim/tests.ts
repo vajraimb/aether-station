@@ -117,11 +117,17 @@ export function runAllTests(): TestResult[] {
     const st = idleState({ w: [0, 0, 0], sd: 0, th1: 0, th2: 0, th1d: 0, th2d: 0 });
     const u = { ...u0(), Fslider: 100 };
     const a = rk4Step(st, cfg, u, 0.005);
+    const H0 = totalAngularMomentumI(cfg, st, 0.318);
+    const H1 = totalAngularMomentumI(cfg, a, 0.318);
+    const P0 = linearMomentumI(cfg, st);
+    const P1 = linearMomentumI(cfg, a);
+    const dH = vnorm([H1[0] - H0[0], H1[1] - H0[1], H1[2] - H0[2]]);
+    const dP = vnorm([P1[0] - P0[0], P1[1] - P0[1], P1[2] - P0[2]]);
     out.push(
       ok(
         "test_slider_reaction",
-        Math.abs(a.s - st.s) > 1e-6 && vnorm(a.w) < 1e-5,
-        `Δs=${(a.s - st.s).toExponential(2)} |ω|=${vnorm(a.w).toExponential(2)}`,
+        Math.abs(a.s - st.s) > 1e-6 && dP < 1e-9 && dH < 1e-6,
+        `Δs=${(a.s - st.s).toExponential(2)} ΔP=${dP.toExponential(2)} ΔH=${dH.toExponential(2)}`,
       ),
     );
   }
@@ -240,8 +246,8 @@ export function runAllTests(): TestResult[] {
     const dH = vnorm([H1[0] - H0[0], H1[1] - H0[1], H1[2] - H0[2]]) / (vnorm(H0) + 1e-9);
     const dP = vnorm([P1[0] - P0[0], P1[1] - P0[1], P1[2] - P0[2]]);
     const dE = Math.abs(E1 - E0) / (Math.abs(E0) + 1e-9);
-    out.push(ok("test_momentum_conservation", dH < 0.05 && dP < 1e-4, `rel ΔH=${dH.toExponential(2)} ΔP=${dP.toExponential(2)}`));
-    out.push(ok("test_energy_conservation_limit", dE < 0.08, `rel ΔE=${dE.toExponential(2)} (2 s, c=0)`));
+    out.push(ok("test_momentum_conservation", dH < 1e-8 && dP < 1e-10, `rel ΔH=${dH.toExponential(2)} ΔP=${dP.toExponential(2)}`));
+    out.push(ok("test_energy_conservation_limit", dE < 1e-8, `rel ΔE=${dE.toExponential(2)} (2 s, c=0)`));
     out.push(ok("test_quaternion_norm_integration", maxQ < 1e-6, `max |q|-1 = ${maxQ.toExponential(2)}`));
   }
 

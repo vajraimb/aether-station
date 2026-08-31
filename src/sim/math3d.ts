@@ -281,3 +281,46 @@ export function almostEqual(a: number, b: number, tol = 1e-9): boolean {
 export function vmaxabs(a: Vec3): number {
   return Math.max(Math.abs(a[0]), Math.abs(a[1]), Math.abs(a[2]));
 }
+
+/** Solve A x = b with partial-pivot Gaussian elimination. A is n×n. */
+export function solveLinear(Ain: number[][], bin: number[]): number[] {
+  const n = bin.length;
+  const A: number[][] = new Array(n);
+  const b = bin.slice();
+  for (let i = 0; i < n; i++) A[i] = Ain[i]!.slice();
+  for (let k = 0; k < n; k++) {
+    let piv = k;
+    let best = Math.abs(A[k]![k]!);
+    for (let i = k + 1; i < n; i++) {
+      const v = Math.abs(A[i]![k]!);
+      if (v > best) {
+        best = v;
+        piv = i;
+      }
+    }
+    if (best < 1e-18) {
+      A[k]![k] = 1e-18;
+    } else if (piv !== k) {
+      const tmp = A[k]!;
+      A[k] = A[piv]!;
+      A[piv] = tmp;
+      const tb = b[k]!;
+      b[k] = b[piv]!;
+      b[piv] = tb;
+    }
+    const akk = A[k]![k]!;
+    for (let i = k + 1; i < n; i++) {
+      const f = A[i]![k]! / akk;
+      A[i]![k] = 0;
+      for (let j = k + 1; j < n; j++) A[i]![j]! -= f * A[k]![j]!;
+      b[i]! -= f * b[k]!;
+    }
+  }
+  const x = new Array<number>(n).fill(0);
+  for (let i = n - 1; i >= 0; i--) {
+    let s = b[i]!;
+    for (let j = i + 1; j < n; j++) s -= A[i]![j]! * x[j]!;
+    x[i] = s / A[i]![i]!;
+  }
+  return x;
+}

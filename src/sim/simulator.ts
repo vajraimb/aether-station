@@ -180,14 +180,14 @@ export class Simulator {
         const f = this.controller.getFdir();
         if (f.detectionTime !== null && !this.events.some((e) => e.type === "fault_detected")) {
           this.events.push({
-            t: f.detectionTime,
+            t: Math.max(t, this.scenario.faultTime),
             type: "fault_detected",
-            data: { delay: this.scenario.faultTime !== undefined ? f.detectionTime - this.scenario.faultTime : null },
+            data: { delay: f.detectionTime - this.scenario.faultTime },
           });
         }
         if (f.isolationTime !== null && !this.events.some((e) => e.type === "fault_isolated")) {
           this.events.push({
-            t: f.isolationTime,
+            t: Math.max(t, this.scenario.faultTime),
             type: "fault_isolated",
             data: {
               thruster: f.detectedFailedThruster,
