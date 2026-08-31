@@ -1,5 +1,5 @@
 {
-  "commitSha": "7c3eca07c6f3f91386d302d806c3e39d6348109e",
+  "commitSha": "65d6992a47dba8c0acfa5b941151373ce04729b9",
   "elapsed_ms": 1089,
   "timestamp": "2026-08-31T16:50:13.283Z",
   "wiredToController": false,
@@ -1156,7 +1156,7 @@
       }
     ]
   },
-  "notes": "Wrench SVD is body-frame torque at 40 ms. Sequence search allows intermediate ⊥ growth and scores net ΔH_⊥. Not wired to DiscretePulseV2Controller.",
+  "notes": "Wrench SVD is body-frame torque at 40 ms. Sequence search allows intermediate \u22a5 growth and scores net \u0394H_\u22a5. Not wired to DiscretePulseV2Controller.",
   "status": {
     "physics": "PASS",
     "onlineControl": "FAIL",

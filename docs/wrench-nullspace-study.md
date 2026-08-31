@@ -1,6 +1,6 @@
 # Wrench geometry and long-sequence null-space
 
-Branch: `research/wrench-nullspace-and-long-sequence`
+Branch: `research/wrench-nullspace-and-long-sequence` @ `65d6992`
 
 Not a controller. kNN-value remains stopped. Short 2–4 macros remain unwired. Old V2 Draft PR is untouched. Physics kernel frozen at `bdfff5b`.
 
