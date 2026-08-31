@@ -40,10 +40,10 @@ import {
 export const TERMINAL_PULSE_DURATIONS = [0.04, 0.08, 0.12, 0.16] as const satisfies readonly PulseDurationS[];
 
 export const TERMINAL_ROLLOUT_CONFIG: RolloutConfig = {
-  dt: 0.005,
+  dt: 0.01,
   commandDelayS: CMD_DELAY,
   maxActive: MAX_ACTIVE,
-  useCollision: true,
+  useCollision: false,
   fast: false,
 };
 
@@ -61,9 +61,9 @@ export interface TerminalSearchConfig {
 }
 
 export const DEFAULT_TERMINAL_CONFIG: TerminalSearchConfig = {
-  horizonS: 1.2,
+  horizonS: 1.0,
   beamWidth: 6,
-  expansionBudget: 48,
+  expansionBudget: 24,
   fuelFloorKg: TERMINAL_FUEL_GATE,
   fuelReserveKg: 0.04,
   rollout: TERMINAL_ROLLOUT_CONFIG,
@@ -157,16 +157,22 @@ export function selectTerminalPrimitives(
   };
   take(coast);
   take(analyticPrim);
-  const pairCap = attDeg > 6 ? 1 : 3;
-  let pairs = 0;
+  const bestBySingle = new Map<number, Ranked>();
+  const pairs: Ranked[] = [];
   for (const r of ranked) {
-    if (picked.size >= 8) break;
-    if (r.p.thrusterIds.length === 2) {
-      if (pairs >= pairCap) continue;
-      pairs += 1;
+    if (r.p.thrusterIds.length === 1) {
+      const id = r.p.thrusterIds[0]!;
+      const prev = bestBySingle.get(id);
+      const longer = prev && Math.abs(r.proj - prev.proj) <= 1e-9 && r.p.durationS > prev.p.durationS;
+      if (!prev || r.proj > prev.proj + 1e-9 || longer) bestBySingle.set(id, r);
+    } else if (r.p.thrusterIds.length === 2) {
+      pairs.push(r);
     }
-    take(r.p);
   }
+  const singles = [...bestBySingle.values()].sort((a, b) => b.proj - a.proj || b.p.durationS - a.p.durationS);
+  for (const r of singles) take(r.p);
+  pairs.sort((a, b) => b.proj - a.proj || (a.p.id < b.p.id ? -1 : 1));
+  take(pairs[0]?.p);
   const out = [...picked.values()];
   out.sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
   return out;
@@ -186,15 +192,21 @@ function terminalRank(a: RolloutState, b: RolloutState, plant: PublicConfig, fue
     const att = geodesicAttitudeError(s.qBI, plant.qTarget);
     const w = vnorm(s.omegaB);
     const fuelFail = s.fuelMass + 1e-9 < fuelFloor ? 1 : 0;
-    const rateFail = w > TERMINAL_RATE_GATE ? 1 : 0;
+    const near = att < 2 * TERMINAL_ATT_GATE_RAD;
+    const rateFail = near && w > TERMINAL_RATE_GATE ? 1 : w > 0.04 ? 1 : 0;
     const attFail = att > TERMINAL_ATT_GATE_RAD ? 1 : 0;
-    return { fuelFail, rateFail, attFail, att, w, fuel: s.fuelMass };
+    return { fuelFail, rateFail, attFail, att, w, fuel: s.fuelMass, near };
   };
   const A = gates(a);
   const B = gates(b);
   if (A.fuelFail !== B.fuelFail) return A.fuelFail - B.fuelFail;
-  if (A.rateFail !== B.rateFail) return A.rateFail - B.rateFail;
-  if (A.attFail !== B.attFail) return A.attFail - B.attFail;
+  if (A.near && B.near) {
+    if (A.rateFail !== B.rateFail) return A.rateFail - B.rateFail;
+    if (A.attFail !== B.attFail) return A.attFail - B.attFail;
+  } else {
+    if (A.attFail !== B.attFail) return A.attFail - B.attFail;
+    if (A.rateFail !== B.rateFail) return A.rateFail - B.rateFail;
+  }
   if (Math.abs(A.att - B.att) > 1e-9) return A.att - B.att;
   if (Math.abs(A.w - B.w) > 1e-9) return A.w - B.w;
   return B.fuel - A.fuel;

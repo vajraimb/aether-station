@@ -88,9 +88,17 @@ interface GuidanceScore {
 }
 
 function compareGuidance(a: GuidanceScore, b: GuidanceScore): number {
+  if (a.hard !== b.hard) return a.hard - b.hard;
+  if (a.fuelBelow !== b.fuelBelow) return a.fuelBelow - b.fuelBelow;
+  const tumbleA = a.omega > 0.05 ? 1 : 0;
+  const tumbleB = b.omega > 0.05 ? 1 : 0;
+  if (tumbleA || tumbleB) {
+    if (a.omega !== b.omega) return a.omega - b.omega;
+    if (a.wrongWay !== b.wrongWay) return a.wrongWay - b.wrongWay;
+    if (a.perp !== b.perp) return a.perp - b.perp;
+    return a.fuelUsed - b.fuelUsed;
+  }
   const keys: (keyof GuidanceScore)[] = [
-    "hard",
-    "fuelBelow",
     "wrongWay",
     "basinMiss",
     "perpExcess",

@@ -28,7 +28,6 @@ import {
   type PulsePrimitive,
 } from "./discrete-actions";
 import type { PlantFlightController } from "./factory";
-import { planGuidance } from "./guidance-planner";
 import type {
   ControlCommand,
   ControllerDiagnostics,
@@ -37,7 +36,7 @@ import type {
   PublicControllerConfig,
 } from "./interface";
 import { applyPrimitiveUntilComplete, rolloutFromSimLike, type RolloutParameters, type RolloutState } from "./rollout-model";
-import { canCaptureWithinHorizon, eigenComponents, TERMINAL_ENTRY_DEG } from "./terminal-reachable";
+import { basinFlags, eigenComponents, TERMINAL_ENTRY_DEG } from "./terminal-reachable";
 import { planTerminal } from "./terminal-planner";
 
 const DETUMBLE_SAFE = 0.12;
@@ -128,7 +127,7 @@ export class DiscretePulseV2Controller implements FlightController, PlantFlightC
     const isolated = this.fdir.isolated;
     const needProbe = probe.probe && this.fdir.detectedFailedThruster < 0 && !isolated.has(probe.probeId);
 
-    const holding = obs.timestamp + 1e-9 < Math.max(this.committedUntil, this.lastReplanT + this.flightCfg.replanPeriodS);
+    const holding = obs.timestamp + 1e-9 < Math.max(this.committedUntil, this.lastReplanT + this.replanHoldS());
     if (!holding) {
       const planned = this.replan(obs.timestamp, est);
       this.lastPlan = planned;
@@ -209,8 +208,6 @@ export class DiscretePulseV2Controller implements FlightController, PlantFlightC
 
     const attDeg = deg(attitudeErrorAngle(qnormalize(est.q), this.plant.qTarget));
     const wmag = vnorm(est.w);
-    const eigen = eigenComponents(state, this.plant);
-    const healthy = [0, 1, 2, 3, 4, 5].filter((id) => !this.fdir.isolated.has(id));
     if (est.fuel < this.flightCfg.fuelFloorKg + beamCfg.fuelReserveKg) {
       this.fallbackCount += 1;
       this.lastPhase = "fallback";
@@ -251,24 +248,15 @@ export class DiscretePulseV2Controller implements FlightController, PlantFlightC
       return coast;
     }
 
-    const cap =
-      attDeg <= TERMINAL_ENTRY_DEG + 3
-        ? canCaptureWithinHorizon(state, 0.04, healthy, params, this.plant, { horizonS: 1.6, expansionBudget: 32 })
-        : {
-            captured: false,
-            predictedAttDeg: attDeg,
-            predictedOmega: wmag,
-            predictedFuelKg: est.fuel,
-            expandedNodes: 0,
-            reason: "outside-entry-cone",
-          };
-    this.lastReachable = cap.captured;
-    const useTerminal = cap.captured || attDeg <= TERMINAL_ENTRY_DEG;
+    const flags = basinFlags(state, this.plant, TERMINAL_ENTRY_DEG, this.flightCfg.fuelFloorKg);
+    const useTerminal = flags.inBasin || attDeg <= 8;
     this.lastPhase = useTerminal ? "terminal" : "guidance";
+    this.lastReachable = attDeg < 1 && wmag < 0.008 && est.fuel > this.flightCfg.fuelFloorKg;
 
     try {
       if (useTerminal) {
         const result = planTerminal(state, params, this.plant);
+        this.lastReachable = result.captured;
         this.expandedNodes += result.expandedNodes;
         this.lastDiag = {
           expandedNodes: result.expandedNodes,
@@ -292,29 +280,23 @@ export class DiscretePulseV2Controller implements FlightController, PlantFlightC
         }
         return result.primitive;
       }
-      const result = planGuidance(state, params, this.plant);
-      this.expandedNodes += result.expandedNodes;
-      this.lastDiag = {
-        expandedNodes: result.expandedNodes,
-        retainedNodes: result.plan.length,
-        nodesPrunedForFuel: 0,
-        minimumPredictedFuel: result.predictedFuelKg,
-        reserveKg: beamCfg.fuelReserveKg,
-        selectedPlanFuelMargin: result.predictedFuelKg - this.flightCfg.fuelFloorKg,
-        selectedPrimitiveId: result.primitive.id,
-        predictedTerminalAttitudeErrorDeg: result.predictedAttDeg,
-        predictedTerminalAngularSpeedRadS: result.predictedOmega,
-        predictedTerminalFuelKg: result.predictedFuelKg,
-        fallback: result.fallback,
-        reason: result.reason,
+      const guidedCfg: BeamPlannerConfig = {
+        ...DEFAULT_BEAM_CONFIG,
+        horizonS: 5,
+        beamWidth: this.flightCfg.beamWidth,
+        expansionBudget: DEFAULT_BEAM_CONFIG.expansionBudget,
+        fuelFloorKg: this.flightCfg.fuelFloorKg,
       };
-      this.notePrediction(state, params, result.primitive);
-      if (result.primitive.thrusterIds.some((id) => this.fdir.isolated.has(id))) {
+      const beam = planBeam(state, params, this.plant, guidedCfg);
+      this.expandedNodes += beam.diagnostics.expandedNodes;
+      this.lastDiag = { ...beam.diagnostics, reason: beam.diagnostics.reason === "beam" ? "guidance-beam" : beam.diagnostics.reason };
+      this.notePrediction(state, params, beam.primitive);
+      if (beam.primitive.thrusterIds.some((id) => this.fdir.isolated.has(id))) {
         this.fallbackCount += 1;
         this.lastPhase = "fallback";
         return this.coastPrimitive();
       }
-      return result.primitive;
+      return beam.primitive;
     } catch {
       this.fallbackCount += 1;
       this.lastPhase = "fallback";
@@ -327,6 +309,10 @@ export class DiscretePulseV2Controller implements FlightController, PlantFlightC
         return this.coastPrimitive();
       }
     }
+  }
+
+  private replanHoldS(): number {
+    return this.lastPhase === "terminal" ? 0.24 : this.flightCfg.replanPeriodS;
   }
 
   private notePrediction(state: RolloutState, params: RolloutParameters, primitive: PulsePrimitive): void {
@@ -387,7 +373,7 @@ export class DiscretePulseV2Controller implements FlightController, PlantFlightC
     const isolated = this.fdir.isolated;
     const all = generatePulsePrimitives(THRUSTERS, {
       isolatedThrusters: isolated,
-      durationsS: [MIN_PULSE as PulseDurationS],
+      durationsS: [0.16 as PulseDurationS, 0.24 as PulseDurationS, 0.32 as PulseDurationS],
     });
     const w = state.omegaB;
     let best: PulsePrimitive | null = null;
