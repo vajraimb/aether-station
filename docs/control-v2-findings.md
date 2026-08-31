@@ -31,6 +31,19 @@ Stage-one train-10 was not met, so train-50 and hidden were not run.
 - **quantization / expansion budget**: 2800 deterministic expansions, 0.32–0.4 s primitives. Near 1° the 40 ms grid is fine; the miss is earlier, during eigenaxis tracking.
 - **parameter estimation**: 50% of seeds meet the 0.15 relative-error gate (baseline 30%). Failures still sit on RLS bounds for c1/c2/k12; excitation is FDIR-driven, not information-optimal. No seed-specific patches.
 
+## Rollout error envelope
+
+Public synthetic grid (3 regimes × 2 fault states × 2 pending queues × 4 action classes × 7 horizons). Reduced `DEFAULT_ROLLOUT_CONFIG` vs frozen `PARITY_ROLLOUT_CONFIG`, same belief parameters. See `outputs/rollout-error-envelope.json`.
+
+| Horizon | att p50 | att p90 | vs 1° gate |
+|---|---|---|---|
+| 0.5 s | 0.0041 rad (0.23°) | 0.0042 rad | below gate, near terminal tol 0.005 |
+| 2 s | 0.026 rad (1.49°) | 0.026 rad | **above** 1° |
+| 5 s | 0.026 rad (1.48°) | 0.027 rad | **above** 1° |
+| 8–10 s | 0.033–0.035 rad (~2°) | ~0.035 rad | not usable for capture |
+
+Conclusion: 0.5 s high-fidelity (or reduced, barely) can own terminal capture. 3–5 s reduced is acceptable for guidance into a ~8–15° basin. 8–15 s reduced rollout cannot be responsible for the 1° gate.
+
 ## Frozen physics
 
 No bug was found that required editing `math3d.ts`, `dynamics.ts`, or `audit.ts`. Actuator geometry, 18 N, 40 ms, 120 ms delay, two-jet limit, and Isp are unchanged.

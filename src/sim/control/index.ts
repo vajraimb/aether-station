@@ -4,6 +4,7 @@ export * from "./convert";
 export * from "./baseline";
 export * from "./factory";
 export * from "./rollout-model";
+export * from "./rollout-error";
 export * from "./lexicographic-cost";
 export * from "./beam-planner";
 export * from "./controller-v2";
