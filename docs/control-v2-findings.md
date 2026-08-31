@@ -2,9 +2,11 @@
 
 Physics baseline: `bdfff5b4c62733d7156d2f9cdeeaa75661d6c9f4`
 
-Status: **PHYSICS PASS / CAPTURE-VALUE VALIDATION PASS / ONLINE CONTROL UNPROVEN (0/10) / STOP kNN-VALUE LINE / OVERALL FAIL**
+Status: **PHYSICS PASS / CAPTURE-VALUE VALIDATION PASS / ONLINE CONTROL UNPROVEN (0/10) / STOP kNN-VALUE LINE / RESEARCH PHASE COMPLETE / OVERALL FAIL**
 
 PR: **DRAFT / DO NOT MERGE**
+
+Research phase is frozen — see `docs/research-phase.md`. Benchmark surfaces: `src/sim/core.ts` (SimCore), `src/sim/arena.ts` (AgentArena), `outputs/ARTIFACTS.md` (ledger).
 
 Follow-on diagnosis (macros + belief audit) lives on `control/action-macro-and-belief-audit` — see `docs/action-macro-and-belief-audit.md`. Wrench / long-sequence: `research/wrench-nullspace-and-long-sequence` (`docs/wrench-nullspace-study.md`). Low-rate robust terminal cancellation: `research/robust-terminal-cancellation` (`docs/robust-terminal-cancellation.md`). None of that work is a controller.
 

@@ -1,10 +1,21 @@
 # AETHER
 
-Failed space-station attitude recovery — a 6-DOF GNC lab.
+Failed space-station attitude recovery — a 6-DOF GNC **benchmark**.
 
 A tumbling cylindrical station, an internal sliding mass, and a two-mode nonlinear annular-tank slosh model. Six cold-gas RCS jets (max two at once, 18 N, 40 ms min pulse, 120 ms command delay). One jet fails in flight. The flight controller sees only a noisy, delayed `Observation` — never truth, never the hidden slosh coefficients `c1 / c2 / k12 / ηT`, never a wall-clock of 73.4 s.
 
-Demo seed `20260831`: `c1=0.137`, `c2=0.091`, `k12=0.318`, `ηT=0.873`, fault at 73.4 s on +Y.
+```text
+PHYSICS: PASS
+BENCHMARK INFRASTRUCTURE: PASS
+CONTROL BASELINES: FAIL
+READY TO WIRE: NO
+OVERALL: FAIL
+RESEARCH PHASE: COMPLETE
+```
+
+Frozen kernel: `bdfff5b` (`math3d.ts` / `dynamics.ts` / `audit.ts`). Surfaces: `src/sim/core.ts` (SimCore), `src/sim/arena.ts` (AgentArena), `outputs/ARTIFACTS.md` (ledger). Archive: `docs/research-phase.md`.
+
+Demo seed `20260831`: `c1=0.137`, `c2=0.091`, `k12=0.318`, `ηT=0.873`, fault at 73.4 s on +Y. Do not retune PD on this seed.
 
 ## Install
 
@@ -55,8 +66,12 @@ npm run test:sim
 ## Layout
 
 ```
-src/sim/          dynamics, RCS, sensors, MEKF, observation-only controller, oracle, FDIR, tests
-src/sim/cli/      headless sim / score / physics / benchmark
-src/viz/          Three.js / R3F station scene
+src/sim/core.ts    SimCore — frozen plant surface
+src/sim/arena.ts   AgentArena — observation-only agent + file scorer
+src/sim/           dynamics, RCS, sensors, MEKF, controllers, oracle, FDIR, tests
+src/sim/cli/       headless sim / score / physics / benchmark
+src/viz/           Three.js / R3F station scene
 src/components/MissionApp.tsx
+docs/research-phase.md
+docs/benchmark.md
 ```

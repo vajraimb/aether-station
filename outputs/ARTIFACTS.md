@@ -5,6 +5,9 @@ are local or release artifacts, not review surface.
 
 Physics baseline: `bdfff5b4c62733d7156d2f9cdeeaa75661d6c9f4`
 
+Research phase: **COMPLETE**. See `docs/research-phase.md` and `docs/benchmark.md`.
+Do not treat study JSON as a flight controller.
+
 | Artifact | Generate |
 |---|---|
 | `outputs/conservation.json` | `npm run test:physics` |
