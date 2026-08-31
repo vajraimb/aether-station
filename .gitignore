@@ -36,6 +36,7 @@ outputs/v2-failure-traces/*.json
 !outputs/v2-failure-traces/summary.json
 outputs/trajectory.csv
 outputs/events.jsonl
+outputs/capture-reachability-study.quick.json
 
 # OS / editor
 .DS_Store
