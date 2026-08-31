@@ -9,4 +9,5 @@ export * from "./lexicographic-cost";
 export * from "./beam-planner";
 export * from "./terminal-planner";
 export * from "./terminal-reachable";
+export * from "./guidance-planner";
 export * from "./controller-v2";

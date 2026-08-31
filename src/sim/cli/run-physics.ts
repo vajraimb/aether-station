@@ -80,10 +80,11 @@ const ctrlFiles = [
   "control/discrete-actions.ts",
   "control/rollout-model.ts",
   "control/rollout-error.ts",
-  "control/terminal-planner.ts",
-  "control/terminal-reachable.ts",
   "control/beam-planner.ts",
   "control/lexicographic-cost.ts",
+  "control/terminal-planner.ts",
+  "control/terminal-reachable.ts",
+  "control/guidance-planner.ts",
   "control/controller-v2.ts",
 ].map((f) => join(simDir, f));
 for (const f of ctrlFiles) {

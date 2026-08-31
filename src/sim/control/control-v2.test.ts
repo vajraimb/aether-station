@@ -7,6 +7,7 @@ import { runBeamPlannerTests } from "./beam-planner.test";
 import { runRolloutTests } from "./rollout-model.test";
 import { runRolloutErrorTests } from "./rollout-error.test";
 import { runTerminalReachableTests } from "./terminal-reachable.test";
+import { runHierarchicalTests } from "./hierarchical.test";
 
 interface T {
   name: string;
@@ -33,6 +34,7 @@ export function runControlV2Tests(): T[] {
   out.push(...runRolloutTests());
   out.push(...runRolloutErrorTests());
   out.push(...runTerminalReachableTests());
+  out.push(...runHierarchicalTests());
   out.push(...runBeamPlannerTests());
 
   const plant = defaultPublicConfig({ duration: 0.8 });

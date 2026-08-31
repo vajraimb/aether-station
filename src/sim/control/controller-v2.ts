@@ -12,6 +12,7 @@ import {
   deg,
   qnormalize,
   vnorm,
+  type Quat,
   type Vec3,
 } from "../math3d";
 import type { AnyController } from "../oracle";
@@ -27,15 +28,36 @@ import {
   type PulsePrimitive,
 } from "./discrete-actions";
 import type { PlantFlightController } from "./factory";
+import { planGuidance } from "./guidance-planner";
 import type {
   ControlCommand,
   ControllerDiagnostics,
   FlightController,
+  PlannerPhase,
   PublicControllerConfig,
 } from "./interface";
-import { rolloutFromSimLike, type RolloutParameters, type RolloutState } from "./rollout-model";
+import { applyPrimitiveUntilComplete, rolloutFromSimLike, type RolloutParameters, type RolloutState } from "./rollout-model";
+import { canCaptureWithinHorizon, eigenComponents, TERMINAL_ENTRY_DEG } from "./terminal-reachable";
+import { planTerminal } from "./terminal-planner";
 
 const DETUMBLE_SAFE = 0.12;
+
+export interface PlannerTraceSample {
+  t: number;
+  attDeg: number;
+  wParallel: number;
+  wPerp: number;
+  selectedPrimitive: string | null;
+  predictedNextAttDeg: number | null;
+  predictedNextOmega: number | null;
+  actualAttDeg: number;
+  actualOmega: number;
+  predictedVsActualAttDeg: number | null;
+  fuelMarginKg: number;
+  plannerPhase: PlannerPhase;
+  terminalReachable: boolean;
+  fdirMask: readonly number[];
+}
 
 export class DiscretePulseV2Controller implements FlightController, PlantFlightController {
   readonly name = "discrete-pulse-v2";
@@ -54,6 +76,15 @@ export class DiscretePulseV2Controller implements FlightController, PlantFlightC
   private expandedNodes = 0;
   private pendingPlant: PendingPulse[] = [];
   private lastReplanT = -1e9;
+  private lastPhase: PlannerPhase = "guidance";
+  private lastReachable = false;
+  private traceSink: ((sample: PlannerTraceSample) => void) | null = null;
+  private pendingPrediction: {
+    t: number;
+    attDeg: number;
+    omega: number;
+    q: Quat;
+  } | null = null;
 
   constructor(plant: PublicConfig, config: Readonly<PublicControllerConfig>) {
     this.plant = plant;
@@ -66,6 +97,13 @@ export class DiscretePulseV2Controller implements FlightController, PlantFlightC
     this.lastPlan = null;
     this.committedUntil = -1e9;
     this.lastReplanT = -1e9;
+    this.lastPhase = "guidance";
+    this.lastReachable = false;
+    this.pendingPrediction = null;
+  }
+
+  setTraceSink(sink: ((sample: PlannerTraceSample) => void) | null): void {
+    this.traceSink = sink;
   }
 
   step(observation: Readonly<Observation>): ControlCommand {
@@ -121,6 +159,7 @@ export class DiscretePulseV2Controller implements FlightController, PlantFlightC
     this.fdir.pushCommand(obs.timestamp, cmd);
     this.estimator.updateEta(vnorm(this.predictedTorque(cmd.pulseWidth, est)), vnorm(alpha), 620);
     this.pendingPlant = this.pendingPlant.filter((p) => p.tOff > obs.timestamp);
+    this.emitTrace(obs.timestamp, est);
     return cmd;
   }
 
@@ -170,8 +209,12 @@ export class DiscretePulseV2Controller implements FlightController, PlantFlightC
 
     const attDeg = deg(attitudeErrorAngle(qnormalize(est.q), this.plant.qTarget));
     const wmag = vnorm(est.w);
+    const eigen = eigenComponents(state, this.plant);
+    const healthy = [0, 1, 2, 3, 4, 5].filter((id) => !this.fdir.isolated.has(id));
     if (est.fuel < this.flightCfg.fuelFloorKg + beamCfg.fuelReserveKg) {
       this.fallbackCount += 1;
+      this.lastPhase = "fallback";
+      this.lastReachable = false;
       const coast = this.coastPrimitive();
       if (wmag > DETUMBLE_SAFE) {
         const det = this.minDetumble(state, params);
@@ -208,21 +251,129 @@ export class DiscretePulseV2Controller implements FlightController, PlantFlightC
       return coast;
     }
 
+    const cap =
+      attDeg <= TERMINAL_ENTRY_DEG + 3
+        ? canCaptureWithinHorizon(state, 0.04, healthy, params, this.plant, { horizonS: 1.6, expansionBudget: 32 })
+        : {
+            captured: false,
+            predictedAttDeg: attDeg,
+            predictedOmega: wmag,
+            predictedFuelKg: est.fuel,
+            expandedNodes: 0,
+            reason: "outside-entry-cone",
+          };
+    this.lastReachable = cap.captured;
+    const useTerminal = cap.captured || attDeg <= TERMINAL_ENTRY_DEG;
+    this.lastPhase = useTerminal ? "terminal" : "guidance";
+
     try {
-      const result = planBeam(state, params, this.plant, beamCfg);
-      this.lastDiag = result.diagnostics;
-      this.expandedNodes += result.diagnostics.expandedNodes;
-      if (result.diagnostics.fallback) this.fallbackCount += 1;
+      if (useTerminal) {
+        const result = planTerminal(state, params, this.plant);
+        this.expandedNodes += result.expandedNodes;
+        this.lastDiag = {
+          expandedNodes: result.expandedNodes,
+          retainedNodes: result.plan.length,
+          nodesPrunedForFuel: 0,
+          minimumPredictedFuel: result.predictedFuelKg,
+          reserveKg: beamCfg.fuelReserveKg,
+          selectedPlanFuelMargin: result.predictedFuelKg - this.flightCfg.fuelFloorKg,
+          selectedPrimitiveId: result.primitive.id,
+          predictedTerminalAttitudeErrorDeg: result.predictedAttDeg,
+          predictedTerminalAngularSpeedRadS: result.predictedOmega,
+          predictedTerminalFuelKg: result.predictedFuelKg,
+          fallback: result.fallback,
+          reason: result.reason,
+        };
+        this.notePrediction(state, params, result.primitive);
+        if (result.primitive.thrusterIds.some((id) => this.fdir.isolated.has(id))) {
+          this.fallbackCount += 1;
+          this.lastPhase = "fallback";
+          return this.coastPrimitive();
+        }
+        return result.primitive;
+      }
+      const result = planGuidance(state, params, this.plant);
+      this.expandedNodes += result.expandedNodes;
+      this.lastDiag = {
+        expandedNodes: result.expandedNodes,
+        retainedNodes: result.plan.length,
+        nodesPrunedForFuel: 0,
+        minimumPredictedFuel: result.predictedFuelKg,
+        reserveKg: beamCfg.fuelReserveKg,
+        selectedPlanFuelMargin: result.predictedFuelKg - this.flightCfg.fuelFloorKg,
+        selectedPrimitiveId: result.primitive.id,
+        predictedTerminalAttitudeErrorDeg: result.predictedAttDeg,
+        predictedTerminalAngularSpeedRadS: result.predictedOmega,
+        predictedTerminalFuelKg: result.predictedFuelKg,
+        fallback: result.fallback,
+        reason: result.reason,
+      };
+      this.notePrediction(state, params, result.primitive);
       if (result.primitive.thrusterIds.some((id) => this.fdir.isolated.has(id))) {
         this.fallbackCount += 1;
+        this.lastPhase = "fallback";
         return this.coastPrimitive();
       }
       return result.primitive;
     } catch {
       this.fallbackCount += 1;
-      if (wmag > DETUMBLE_SAFE) return this.minDetumble(state, params);
-      return this.coastPrimitive();
+      this.lastPhase = "fallback";
+      try {
+        const result = planBeam(state, params, this.plant, beamCfg);
+        this.lastDiag = result.diagnostics;
+        return result.primitive;
+      } catch {
+        if (wmag > DETUMBLE_SAFE) return this.minDetumble(state, params);
+        return this.coastPrimitive();
+      }
     }
+  }
+
+  private notePrediction(state: RolloutState, params: RolloutParameters, primitive: PulsePrimitive): void {
+    const next = applyPrimitiveUntilComplete(state, params, this.plant, primitive);
+    this.pendingPrediction = {
+      t: next.time,
+      attDeg: deg(attitudeErrorAngle(qnormalize(next.qBI), this.plant.qTarget)),
+      omega: vnorm(next.omegaB),
+      q: [next.qBI[0], next.qBI[1], next.qBI[2], next.qBI[3]],
+    };
+  }
+
+  private emitTrace(t: number, est: Estimate): void {
+    if (!this.traceSink) return;
+    const attDeg = deg(attitudeErrorAngle(qnormalize(est.q), this.plant.qTarget));
+    const wmag = vnorm(est.w);
+    const fake: RolloutState = rolloutFromSimLike({
+      time: t,
+      q: est.q,
+      w: est.w,
+      s: est.s,
+      sd: est.sd,
+      th1: est.th1,
+      th1d: est.th1d,
+      th2: est.th2,
+      th2d: est.th2d,
+      fuel: est.fuel,
+    });
+    const eigen = eigenComponents(fake, this.plant);
+    const pred = this.pendingPrediction;
+    const predDue = pred && t + 1e-6 >= pred.t;
+    this.traceSink({
+      t,
+      attDeg,
+      wParallel: eigen.wPar,
+      wPerp: eigen.wPerp,
+      selectedPrimitive: this.lastPlan?.id ?? this.lastDiag?.selectedPrimitiveId ?? null,
+      predictedNextAttDeg: pred?.attDeg ?? null,
+      predictedNextOmega: pred?.omega ?? null,
+      actualAttDeg: attDeg,
+      actualOmega: wmag,
+      predictedVsActualAttDeg: predDue && pred ? attDeg - pred.attDeg : pred ? attDeg - pred.attDeg : null,
+      fuelMarginKg: est.fuel - this.flightCfg.fuelFloorKg,
+      plannerPhase: this.lastPhase,
+      terminalReachable: this.lastReachable,
+      fdirMask: [...this.fdir.isolated].sort((a, b) => a - b),
+    });
   }
 
   private coastPrimitive(): PulsePrimitive {
@@ -268,6 +419,9 @@ export class DiscretePulseV2Controller implements FlightController, PlantFlightC
       predictedTerminalAttitudeErrorDeg: d?.predictedTerminalAttitudeErrorDeg ?? null,
       predictedTerminalAngularSpeedRadS: d?.predictedTerminalAngularSpeedRadS ?? null,
       predictedTerminalFuelKg: d?.predictedTerminalFuelKg ?? null,
+      plannerPhase: this.lastPhase,
+      terminalReachable: this.lastReachable,
+      terminalEntryDeg: TERMINAL_ENTRY_DEG,
     };
   }
 
