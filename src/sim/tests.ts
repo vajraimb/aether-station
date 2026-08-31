@@ -5,7 +5,6 @@ import {
   qnormalize,
   quatToR,
   mv,
-  pointInertia,
   qnorm,
   vadd,
   vdot,
@@ -25,8 +24,8 @@ import {
 import { AgentController } from "./controller";
 import { generateScenario } from "./scenario";
 import { Simulator } from "./simulator";
-import { scoreFromLog } from "./scoring";
-import type { Observation, SimState } from "./types";
+import { fdirFromEvents, scoreFromLog } from "./scoring";
+import { OBSERVATION_KEYS, type Observation, type SimState } from "./types";
 
 export interface TestResult {
   name: string;
@@ -73,7 +72,6 @@ export function runAllTests(): TestResult[] {
   const out: TestResult[] = [];
   const cfg = defaultPublicConfig();
 
-  // quaternion convention
   {
     const q = qnormalize([0.92388, 0.22094, -0.22094, 0.22094]);
     const R = quatToR(q);
@@ -103,7 +101,6 @@ export function runAllTests(): TestResult[] {
     out.push(ok("test_quaternion_double_cover", Math.abs(a1 - a2) < 1e-9, `angle ${a1} vs ${a2}`));
   }
 
-  // parallel axis
   {
     const ms = massState(cfg, 1.2, 0, 0, 5);
     const expectYy = cfg.dryInertiaB[1] + cfg.sliderMass * 1.2 * 1.2 + ms.m2 * cfg.tankMeanRadius * cfg.tankMeanRadius;
@@ -116,7 +113,6 @@ export function runAllTests(): TestResult[] {
     );
   }
 
-  // slider reaction: applying slider force with ω=0 should not produce torque about origin
   {
     const st = idleState({ w: [0, 0, 0], sd: 0, th1: 0, th2: 0, th1d: 0, th2d: 0 });
     const u = { ...u0(), Fslider: 100 };
@@ -130,7 +126,6 @@ export function runAllTests(): TestResult[] {
     );
   }
 
-  // collision event + no penetration
   {
     const st = idleState({ s: 1.799, sd: 2.0, w: [0, 0, 0], th1: 0, th2: 0, th1d: 0, th2d: 0 });
     const col = integrateWithCollision(cfg, st, u0(), 0.005);
@@ -158,7 +153,6 @@ export function runAllTests(): TestResult[] {
     );
   }
 
-  // thruster force and torque
   {
     const g = THRUSTERS[0]!;
     const F = 18 * 0.873;
@@ -176,14 +170,12 @@ export function runAllTests(): TestResult[] {
     );
   }
 
-  // delay / min pulse / max two — structural
   {
     out.push(ok("test_thruster_delay", cfg.commandDelay === 0.12, `delay=${cfg.commandDelay}`));
     out.push(ok("test_minimum_pulse_width", cfg.minPulse === 0.04, `minPulse=${cfg.minPulse}`));
     out.push(ok("test_max_two_active_thrusters", cfg.maxActiveThrusters === 2, `max=${cfg.maxActiveThrusters}`));
   }
 
-  // fuel consumption sign
   {
     out.push(
       ok(
@@ -194,24 +186,10 @@ export function runAllTests(): TestResult[] {
     );
   }
 
-  // sensor latency: pressure delay is 80 ms via buffer (not truth+noise)
   out.push(ok("test_sensor_latency", true, "pressure uses 80 ms history buffer in SensorSystem"));
   out.push(ok("test_packet_loss_reproducibility", true, "Mulberry32 seeded; same seed → same drop sequence"));
 
-  // controller isolation
   {
-    const keys = [
-      "timestamp",
-      "quaternionMeasured",
-      "gyroMeasured",
-      "sliderPosition",
-      "sliderVelocity",
-      "tankWallPressure1",
-      "tankWallPressure2",
-      "remainingFuelEstimate",
-      "thrusterCurrentFeedback",
-      "actuatorResponseAbnormal",
-    ];
     const sample: Observation = {
       timestamp: 1,
       quaternionMeasured: Q0,
@@ -224,7 +202,7 @@ export function runAllTests(): TestResult[] {
       thrusterCurrentFeedback: [0, 0, 0, 0, 0, 0],
       actuatorResponseAbnormal: false,
     };
-    const extra = Object.keys(sample).filter((k) => !keys.includes(k));
+    const extra = Object.keys(sample).filter((k) => !(OBSERVATION_KEYS as readonly string[]).includes(k));
     const agent = new AgentController(cfg);
     const cmd = agent.step(sample);
     const srcHasFaultTime = JSON.stringify(cmd).includes("73.4");
@@ -237,9 +215,11 @@ export function runAllTests(): TestResult[] {
         `c1=${agent.estimate.c1}`,
       ),
     );
+    out.push(ok("test_controller_step_arity", agent.step.length === 1, `step.length=${agent.step.length}`));
+    out.push(ok("test_controller_no_ingest_truth", !("ingestTruth" in agent), "flight controller has no ingestTruth"));
+    out.push(ok("test_observation_has_no_truth_field", !("truth" in sample) && !("state" in sample) && !("c1" in sample), "obs has no truth/c1"));
   }
 
-  // momentum + energy conservation (open loop, no damping, no slosh damping)
   {
     const st0 = idleState({ th1d: 0.05, th2d: -0.04 });
     const ms0 = massState(cfg, st0.s, st0.th1, st0.th2, st0.fuel);
@@ -265,7 +245,6 @@ export function runAllTests(): TestResult[] {
     out.push(ok("test_quaternion_norm_integration", maxQ < 1e-6, `max |q|-1 = ${maxQ.toExponential(2)}`));
   }
 
-  // step size convergence: |ω| after 0.4 s at dt vs dt/2
   {
     const run = (dt: number) => {
       let st = idleState({ w: [0.1, 0, 0], sd: 0 });
@@ -284,13 +263,11 @@ export function runAllTests(): TestResult[] {
     );
   }
 
-  // cheat protection: controller source contract
   {
     const agent = new AgentController(cfg);
     out.push(ok("test_controller_no_simulator_ref", !("sim" in agent) && !("scenario" in agent), "agent has no sim/scenario fields"));
   }
 
-  // deterministic short replay
   {
     const sc = generateScenario(20260831, true);
     const a = new Simulator(defaultPublicConfig({ duration: 0.5 }), sc);
@@ -310,6 +287,37 @@ export function runAllTests(): TestResult[] {
         "test_metrics_recomputable",
         Math.abs(m1.final_attitude_error_deg - m2.final_attitude_error_deg) < 1e-9,
         "scorer matches live metrics",
+      ),
+    );
+    out.push(ok("test_scenario_event_logged", a.events.some((e) => e.type === "scenario"), "scenario event present for file scorer"));
+  }
+
+  {
+    const r = fdirFromEvents([
+      { t: 0, type: "scenario", data: { faultTime: 73.4, faultThruster: 2 } },
+      { t: 73.4, type: "fault_injected", data: { thruster: 2 } },
+      { t: 73.45, type: "abnormal_flag" },
+      { t: 73.5, type: "fault_detected" },
+      { t: 74.4, type: "fault_isolated", data: { thruster: 2, confidence: 0.8 } },
+    ]);
+    out.push(
+      ok(
+        "test_isolation_delay_definition",
+        r.isolationDelay !== null && Math.abs(r.isolationDelay - 1.0) < 1e-12 && (r.isolationDelay ?? 0) > 0.01,
+        `isoΔ=${r.isolationDelay} (must be 1.0, not 0.001)`,
+      ),
+    );
+  }
+
+  {
+    const demo = generateScenario(1, true);
+    const rnd = generateScenario(424242, false);
+    out.push(ok("test_demo_fault_time", demo.faultTime === 73.4 && demo.faultThruster === 2, `demo t=${demo.faultTime} thr=${demo.faultThruster}`));
+    out.push(
+      ok(
+        "test_random_scenario_varies",
+        rnd.faultTime >= 55 && rnd.faultTime <= 110 && (rnd.faultTime !== 73.4 || rnd.faultThruster !== 2 || rnd.c1 !== demo.c1),
+        `rnd t=${rnd.faultTime.toFixed(2)} thr=${rnd.faultThruster}`,
       ),
     );
   }

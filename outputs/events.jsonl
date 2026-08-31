@@ -1,0 +1,6 @@
+{"t":0,"type":"scenario","data":{"c1":0.137,"c2":0.091,"k12":0.318,"etaT":0.873,"faultTime":73.4,"faultThruster":2,"seed":20260831}}
+{"t":73.4,"type":"fault_injected","data":{"thruster":2}}
+{"t":73.40148153316011,"type":"abnormal_flag"}
+{"t":73.40148153316011,"type":"fault_detected","data":{"delay":0.0014815331601027992}}
+{"t":74.80100140856699,"type":"fault_isolated","data":{"thruster":2,"confidence":0.8}}
+{"t":92.59999999998827,"type":"settled"}

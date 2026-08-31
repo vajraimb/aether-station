@@ -48,6 +48,10 @@ export interface PrivateScenario {
   faultThruster: ThrusterIndex;
   gyroBias0: Vec3;
   demo: boolean;
+  q0: Quat;
+  w0: Vec3;
+  s0: number;
+  sd0: number;
 }
 
 export interface SimState {
@@ -71,6 +75,7 @@ export interface SimState {
   fuel: number;
 }
 
+/** Serialised observation. This is the ONLY input the flight controller may read. */
 export interface Observation {
   timestamp: number;
   quaternionMeasured: Quat;
@@ -84,6 +89,19 @@ export interface Observation {
   actuatorResponseAbnormal: boolean;
 }
 
+export const OBSERVATION_KEYS = [
+  "timestamp",
+  "quaternionMeasured",
+  "gyroMeasured",
+  "sliderPosition",
+  "sliderVelocity",
+  "tankWallPressure1",
+  "tankWallPressure2",
+  "remainingFuelEstimate",
+  "thrusterCurrentFeedback",
+  "actuatorResponseAbnormal",
+] as const;
+
 export interface Command {
   sliderForce: number;
   /** Requested on-time in seconds for this 0.1 s cycle, 0 or >= minPulse. */
@@ -93,8 +111,10 @@ export interface Command {
 export interface SimEvent {
   t: number;
   type:
+    | "scenario"
     | "collision"
     | "fault_injected"
+    | "abnormal_flag"
     | "fault_detected"
     | "fault_isolated"
     | "settled"
@@ -102,6 +122,17 @@ export interface SimEvent {
     | "thruster_on"
     | "thruster_off";
   data?: Record<string, number | string | boolean | null>;
+}
+
+export interface FdirReport {
+  faultInjectionTime: number | null;
+  abnormalFlagTime: number | null;
+  detectionTime: number | null;
+  isolationTime: number | null;
+  detectionDelay: number | null;
+  isolationDelay: number | null;
+  isolatedThrusterId: number;
+  confidence: number;
 }
 
 export interface Sample {
@@ -166,6 +197,14 @@ export interface Metrics {
   isolation_time: number | null;
   isolated_thruster: number;
   settled_time: number | null;
+  faultInjectionTime: number | null;
+  abnormalFlagTime: number | null;
+  detectionTime: number | null;
+  isolationTime: number | null;
+  detectionDelay: number | null;
+  isolationDelay: number | null;
+  isolatedThrusterId: number;
+  confidence: number;
   scorecard: Record<string, { value: number | boolean | null; pass: boolean; target: string }>;
 }
 
@@ -185,3 +224,13 @@ export interface MassProps {
 }
 
 export const THRUSTER_NAMES = ["+X", "-X", "+Y", "-Y", "+Z", "-Z"] as const;
+
+export interface HiddenParams {
+  c1: number;
+  c2: number;
+  k12: number;
+  etaT: number;
+  faultTime: number;
+  faultThruster: number;
+  seed: number;
+}

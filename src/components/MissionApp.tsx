@@ -167,7 +167,7 @@ export function MissionApp() {
     const tr = trailRef.current;
     tr.push(tip);
     if (tr.length > 400) tr.splice(0, tr.length - 400);
-    setOpts((o) => ({ ...o, isolated: sim.agent.detectedFailedThruster }));
+    setOpts((o) => ({ ...o, isolated: sim.controller.detectedFailedThruster }));
     setTick((k) => k + 1);
   }, []);
 
@@ -208,7 +208,7 @@ export function MissionApp() {
     const run = () => {
       let n = 0;
       while (n < 2500 && s.step()) n += 1;
-      setOpts((o) => ({ ...o, isolated: s.agent.detectedFailedThruster }));
+      setOpts((o) => ({ ...o, isolated: s.controller.detectedFailedThruster }));
       setTick((k) => k + 1);
       if (s.state.t < s.cfg.duration - 1e-9) {
         setTimeout(run, 0);
@@ -643,11 +643,12 @@ function TruthEst({ label, est, truth, p }: { label: string; est: number; truth:
 }
 
 function FdirPanel({ sample, sim }: { sample: Sample; sim: Simulator | null }) {
+  const fdir = sim?.fdirReport();
   return (
     <div className="space-y-3">
       <p className="text-xs text-fg-muted">
         Isolation uses command vs current residuals after the 120 ms delay — never wall-clock
-        comparison against 73.4 s.
+        comparison against 73.4 s. isolationDelay = isolationTime − faultInjectionTime.
       </p>
       <div className="grid grid-cols-2 gap-2">
         {THRUSTER_NAMES.map((n, i) => {
@@ -668,10 +669,15 @@ function FdirPanel({ sample, sim }: { sample: Sample; sim: Simulator | null }) {
           );
         })}
       </div>
-      <div className="font-mono text-2xs text-fg-muted">
-        detect {sim?.agent.detectionTime != null ? fmt(sim.agent.detectionTime, 2) + " s" : "—"}
-        {" · "}
-        isolate {sim?.agent.isolationTime != null ? fmt(sim.agent.isolationTime, 2) + " s" : "—"}
+      <div className="grid grid-cols-2 gap-x-3 gap-y-1 font-mono text-2xs text-fg-muted">
+        <div>inject {fdir?.faultInjectionTime != null ? fmt(fdir.faultInjectionTime, 3) + " s" : "—"}</div>
+        <div>abnormal {fdir?.abnormalFlagTime != null ? fmt(fdir.abnormalFlagTime, 3) + " s" : "—"}</div>
+        <div>detect {fdir?.detectionTime != null ? fmt(fdir.detectionTime, 3) + " s" : "—"}</div>
+        <div>isolate {fdir?.isolationTime != null ? fmt(fdir.isolationTime, 3) + " s" : "—"}</div>
+        <div>detΔ {fdir?.detectionDelay != null ? fmt(fdir.detectionDelay, 3) + " s" : "—"}</div>
+        <div>isoΔ {fdir?.isolationDelay != null ? fmt(fdir.isolationDelay, 3) + " s" : "—"}</div>
+        <div>id {fdir?.isolatedThrusterId ?? sample.detectedFailedThruster}</div>
+        <div>conf {fdir ? fmt(fdir.confidence, 2) : "—"}</div>
       </div>
     </div>
   );
@@ -695,19 +701,14 @@ function ModelPanel() {
       </p>
       <p>
         Thrusters: six cold-gas jets, |F| ≤ 18 N, 40 ms minimum pulse, 120 ms command delay, at
-        most two firing. +Y is failed by the scenario generator — the agent must isolate it from
-        current feedback and rate innovation.
+        most two firing. The failed jet is chosen by the scenario generator — the agent must
+        isolate it from current feedback. Terminal pointing uses pulse-density modulation on the
+        remaining reachable set; whether 1° is a plant limit is answered by the oracle in
+        outputs/oracle-metrics.json, not by this tab.
       </p>
       <p>
         Integration: RK4, Δt = 5 ms. Slider impacts use event location (linear interpolation to
         the bound) and an inelastic impulse e = 0.15, not a clip.
-      </p>
-      <p>
-        Known limit: after +Y is lost, a 40 ms min-pulse on the remaining pair imparts Δω ≈ 4e-4
-        rad/s. Holding 1° for the remaining ~80 s would require either a third simultaneous jet
-        or a shorter pulse — both forbidden. Best closed-loop on the demo seed reaches ~2.3° with
-        |ω| well under 0.008, fuel above 2.8 kg, and FDIR isolation of +Y within 3 s. This is an
-        actuator-layout limit, not a scoring forgery.
       </p>
     </div>
   );

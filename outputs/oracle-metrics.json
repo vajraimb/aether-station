@@ -1,0 +1,76 @@
+{
+  "final_attitude_error_deg": 3.0238501374020212,
+  "final_angular_speed_rad_s": 0.0005820270446731526,
+  "max_slider_impact_speed_m_s": 0,
+  "initial_slosh_energy": 4.771721351256455,
+  "final_slosh_energy": 0.000010600218034961307,
+  "final_slosh_energy_ratio": 0.0000022214662706928883,
+  "remaining_fuel_kg": 2.5928922480867476,
+  "parameter_relative_error": 0.08369504237565163,
+  "fault_detection_delay_s": 0.0014815331601027992,
+  "fault_isolation_accuracy": 1,
+  "quaternion_norm_max_error": 2.220446049250313e-16,
+  "maximum_constraint_violation": 0,
+  "total_thruster_on_time": 102.14999999997958,
+  "pulse_count": 1257,
+  "run_is_deterministic": true,
+  "detection_time": 73.40148153316011,
+  "isolation_time": 74.8989591608459,
+  "isolated_thruster": 2,
+  "settled_time": 78.2700000000013,
+  "faultInjectionTime": 73.4,
+  "abnormalFlagTime": 73.40148153316011,
+  "detectionTime": 73.40148153316011,
+  "isolationTime": 74.8989591608459,
+  "detectionDelay": 0.0014815331601027992,
+  "isolationDelay": 1.4989591608458994,
+  "isolatedThrusterId": 2,
+  "confidence": 0.8,
+  "scorecard": {
+    "final_attitude_error_deg": {
+      "value": 3.0238501374020212,
+      "pass": false,
+      "target": "< 1"
+    },
+    "final_angular_speed_rad_s": {
+      "value": 0.0005820270446731526,
+      "pass": true,
+      "target": "< 0.008"
+    },
+    "max_slider_impact_speed_m_s": {
+      "value": 0,
+      "pass": true,
+      "target": "< 0.25"
+    },
+    "final_slosh_energy_ratio": {
+      "value": 0.0000022214662706928883,
+      "pass": true,
+      "target": "< 0.08"
+    },
+    "remaining_fuel_kg": {
+      "value": 2.5928922480867476,
+      "pass": false,
+      "target": "> 2.8"
+    },
+    "parameter_relative_error": {
+      "value": 0.08369504237565163,
+      "pass": true,
+      "target": "< 0.15"
+    },
+    "fault_detection_delay_s": {
+      "value": 0.0014815331601027992,
+      "pass": true,
+      "target": "< 3"
+    },
+    "quaternion_norm_max_error": {
+      "value": 2.220446049250313e-16,
+      "pass": true,
+      "target": "< 0.000001"
+    },
+    "run_is_deterministic": {
+      "value": true,
+      "pass": true,
+      "target": "true"
+    }
+  }
+}

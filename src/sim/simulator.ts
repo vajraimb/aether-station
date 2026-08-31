@@ -2,23 +2,12 @@ import {
   attitudeErrorAngle,
   deg,
   qnorm,
+  qnormalize,
   qRotate,
   vnorm,
   type Vec3,
 } from "./math3d";
-import {
-  CTRL_DT,
-  DT,
-  Q0,
-  S0,
-  SD0,
-  SENS_DT,
-  TH1_0,
-  TH1D_0,
-  TH2_0,
-  TH2D_0,
-  W0,
-} from "./constants";
+import { CTRL_DT, DT, SENS_DT } from "./constants";
 import { AgentController } from "./controller";
 import {
   integrateWithCollision,
@@ -33,6 +22,7 @@ import { SensorSystem } from "./sensors";
 import { ThrusterSystem } from "./thrusters";
 import type {
   Command,
+  FdirReport,
   Metrics,
   Observation,
   PrivateScenario,
@@ -42,12 +32,15 @@ import type {
   SimState,
 } from "./types";
 import { SCORE_TARGETS } from "./constants";
+import type { AnyController } from "./oracle";
+import { fdirFromEvents, fillScorecard } from "./scoring";
 
 export class Simulator {
   cfg: PublicConfig;
   scenario: PrivateScenario;
   state: SimState;
-  agent: AgentController;
+  controller: AnyController;
+  agent: AgentController | null;
   sensors: SensorSystem;
   thrusters: ThrusterSystem;
   log: Sample[] = [];
@@ -69,13 +62,15 @@ export class Simulator {
   private lastSnap: ReturnType<ThrusterSystem["evaluate"]> | null = null;
   private logEvery: number;
   private nextLog: number;
+  private abnormalFlagged = false;
   initialSloshEnergy = 0;
   abnormal = false;
 
-  constructor(cfg: PublicConfig, scenario: PrivateScenario) {
+  constructor(cfg: PublicConfig, scenario: PrivateScenario, controller?: AnyController) {
     this.cfg = cfg;
     this.scenario = scenario;
-    this.agent = new AgentController(cfg);
+    this.controller = controller ?? new AgentController(cfg);
+    this.agent = this.controller instanceof AgentController ? this.controller : null;
     this.sensors = new SensorSystem(scenario.seed, scenario.gyroBias0, cfg.sensorPeriod);
     this.thrusters = new ThrusterSystem(scenario.etaT, {
       Fmax: cfg.maxThrust,
@@ -85,20 +80,22 @@ export class Simulator {
       g0: cfg.g0,
     });
     const fuel = cfg.initialFuelMass;
+    const q0 = scenario.q0;
+    const w0 = scenario.w0;
     this.state = {
       t: 0,
       rI: [0, 0, 0],
       vI: [0, 0, 0],
       rCmI: [0, 0, 0],
       vCmI: [0, 0, 0],
-      q: [Q0[0], Q0[1], Q0[2], Q0[3]],
-      w: [W0[0], W0[1], W0[2]],
-      s: S0,
-      sd: SD0,
-      th1: cfg.fluidPresent ? TH1_0 : 0,
-      th1d: cfg.fluidPresent ? TH1D_0 : 0,
-      th2: cfg.fluidPresent ? TH2_0 : 0,
-      th2d: cfg.fluidPresent ? TH2D_0 : 0,
+      q: qnormalize([q0[0], q0[1], q0[2], q0[3]]),
+      w: [w0[0], w0[1], w0[2]],
+      s: scenario.s0,
+      sd: scenario.sd0,
+      th1: cfg.fluidPresent ? 0.18 : 0,
+      th1d: 0,
+      th2: cfg.fluidPresent ? -0.11 : 0,
+      th2d: cfg.fluidPresent ? 0.06 : 0,
       fuel,
     };
     const ms = massState(cfg, this.state.s, this.state.th1, this.state.th2, fuel);
@@ -125,6 +122,19 @@ export class Simulator {
     this.faultArmed = true;
     this.logEvery = 0.05;
     this.nextLog = 0;
+    this.events.push({
+      t: 0,
+      type: "scenario",
+      data: {
+        c1: scenario.c1,
+        c2: scenario.c2,
+        k12: scenario.k12,
+        etaT: scenario.etaT,
+        faultTime: scenario.faultTime,
+        faultThruster: scenario.faultThruster,
+        seed: scenario.seed,
+      },
+    });
     this.record();
   }
 
@@ -151,31 +161,37 @@ export class Simulator {
     if (t + 1e-12 >= this.nextSens) {
       const snap = this.lastSnap ?? this.thrusters.evaluate(t, dt, this.state.fuel);
       const obs = this.sensors.sample(this.state, this.state.fuel, snap.current, this.abnormal);
-      if (obs) this.lastObs = obs;
+      if (obs) {
+        this.lastObs = obs;
+        if (obs.actuatorResponseAbnormal && !this.abnormalFlagged) {
+          this.abnormalFlagged = true;
+          this.events.push({ t: obs.timestamp, type: "abnormal_flag" });
+        }
+      }
       this.nextSens += this.cfg.sensorPeriod;
     }
 
     if (t + 1e-12 >= this.nextCtrl) {
       if (this.lastObs) {
-        const cmd = this.agent.step(this.lastObs);
+        if (this.controller.ingestTruth) this.controller.ingestTruth(this.state);
+        const cmd = this.controller.step(this.lastObs);
         this.lastCmd = cmd;
         this.thrusters.submit(t, cmd);
-        const d = this.agent.detectionTime;
-        const iso = this.agent.isolationTime;
-        if (d !== null && !this.events.some((e) => e.type === "fault_detected")) {
+        const f = this.controller.getFdir();
+        if (f.detectionTime !== null && !this.events.some((e) => e.type === "fault_detected")) {
           this.events.push({
-            t: d,
+            t: f.detectionTime,
             type: "fault_detected",
-            data: { delay: d - this.scenario.faultTime },
+            data: { delay: this.scenario.faultTime !== undefined ? f.detectionTime - this.scenario.faultTime : null },
           });
         }
-        if (iso !== null && !this.events.some((e) => e.type === "fault_isolated")) {
+        if (f.isolationTime !== null && !this.events.some((e) => e.type === "fault_isolated")) {
           this.events.push({
-            t: iso,
+            t: f.isolationTime,
             type: "fault_isolated",
             data: {
-              thruster: this.agent.detectedFailedThruster,
-              confidence: this.agent.isolationConfidence,
+              thruster: f.detectedFailedThruster,
+              confidence: f.isolationConfidence,
             },
           });
         }
@@ -240,7 +256,7 @@ export class Simulator {
 
   private record() {
     const st = this.state;
-    const est = this.agent.estimate;
+    const est = this.controller.getEstimate();
     const mm = modalMasses(this.cfg.fluidMass);
     const se = sloshEnergy(
       st.th1,
@@ -255,6 +271,7 @@ export class Simulator {
     const H = totalAngularMomentumI(this.cfg, st, this.scenario.k12);
     const herr = vnorm([H[0] - this.H0[0], H[1] - this.H0[1], H[2] - this.H0[2]]);
     const snap = this.lastSnap;
+    const fdir = this.controller.getFdir();
     this.log.push({
       t: st.t,
       r: [...st.rI] as Vec3,
@@ -286,10 +303,10 @@ export class Simulator {
       k12P: est.k12P,
       etaP: est.etaP,
       attitudeErrorDeg: deg(attitudeErrorAngle(st.q, this.cfg.qTarget)),
-      thrusterCmd: snap ? [...snap.commanded] as typeof snap.commanded : [0, 0, 0, 0, 0, 0],
-      thrusterActual: snap ? [...snap.actual] as typeof snap.actual : [0, 0, 0, 0, 0, 0],
-      faultConfidence: [...this.agent.faultConfidence],
-      detectedFailedThruster: this.agent.detectedFailedThruster,
+      thrusterCmd: snap ? ([...snap.commanded] as typeof snap.commanded) : [0, 0, 0, 0, 0, 0],
+      thrusterActual: snap ? ([...snap.actual] as typeof snap.actual) : [0, 0, 0, 0, 0, 0],
+      faultConfidence: [...fdir.faultConfidence],
+      detectedFailedThruster: fdir.detectedFailedThruster,
       quaternionNormError: Math.abs(qnorm(st.q) - 1),
       totalAngularMomentumError: herr,
       nis: est.nis,
@@ -307,6 +324,10 @@ export class Simulator {
     this.record();
   }
 
+  fdirReport(): FdirReport {
+    return fdirFromEvents(this.events, this.controller.getFdir().isolationConfidence);
+  }
+
   metrics(): Metrics {
     return computeMetrics(this);
   }
@@ -315,9 +336,9 @@ export class Simulator {
 export function computeMetrics(sim: Simulator): Metrics {
   const last = sim.log[sim.log.length - 1]!;
   const sc = sim.scenario;
-  const det = sim.agent.detectionTime;
-  const delay = det === null ? null : det - sc.faultTime;
-  const isoOk = sim.agent.detectedFailedThruster === sc.faultThruster ? 1 : 0;
+  const fdir = sim.fdirReport();
+  const delay = fdir.detectionDelay;
+  const isoOk = fdir.isolatedThrusterId === sc.faultThruster ? 1 : 0;
   const c1e = Math.abs(last.c1Est - sc.c1) / Math.max(sc.c1, 1e-6);
   const c2e = Math.abs(last.c2Est - sc.c2) / Math.max(sc.c2, 1e-6);
   const k12e = Math.abs(last.k12Est - sc.k12) / Math.max(sc.k12, 1e-6);
@@ -344,38 +365,30 @@ export function computeMetrics(sim: Simulator): Metrics {
     total_thruster_on_time: sim.thrusters.totalOnTime,
     pulse_count: sim.thrusters.pulseCount,
     run_is_deterministic: true,
-    detection_time: det,
-    isolation_time: sim.agent.isolationTime,
-    isolated_thruster: sim.agent.detectedFailedThruster,
+    detection_time: fdir.detectionTime,
+    isolation_time: fdir.isolationTime,
+    isolated_thruster: fdir.isolatedThrusterId,
     settled_time: sim.events.find((e) => e.type === "settled")?.t ?? null,
+    faultInjectionTime: fdir.faultInjectionTime,
+    abnormalFlagTime: fdir.abnormalFlagTime,
+    detectionTime: fdir.detectionTime,
+    isolationTime: fdir.isolationTime,
+    detectionDelay: fdir.detectionDelay,
+    isolationDelay: fdir.isolationDelay,
+    isolatedThrusterId: fdir.isolatedThrusterId,
+    confidence: fdir.confidence,
     scorecard: {},
   };
-  const T = SCORE_TARGETS;
-  const pass = (v: number | null | boolean, ok: boolean, target: string) => ({
-    value: v,
-    pass: ok,
-    target,
-  });
-  m.scorecard = {
-    final_attitude_error_deg: pass(m.final_attitude_error_deg, m.final_attitude_error_deg < T.final_attitude_error_deg, `< ${T.final_attitude_error_deg}`),
-    final_angular_speed_rad_s: pass(m.final_angular_speed_rad_s, m.final_angular_speed_rad_s < T.final_angular_speed_rad_s, `< ${T.final_angular_speed_rad_s}`),
-    max_slider_impact_speed_m_s: pass(m.max_slider_impact_speed_m_s, m.max_slider_impact_speed_m_s < T.max_slider_impact_speed_m_s, `< ${T.max_slider_impact_speed_m_s}`),
-    final_slosh_energy_ratio: pass(m.final_slosh_energy_ratio, m.final_slosh_energy_ratio < T.final_slosh_energy_ratio, `< ${T.final_slosh_energy_ratio}`),
-    remaining_fuel_kg: pass(m.remaining_fuel_kg, m.remaining_fuel_kg > T.remaining_fuel_kg, `> ${T.remaining_fuel_kg}`),
-    parameter_relative_error: pass(m.parameter_relative_error, m.parameter_relative_error < T.parameter_relative_error, `< ${T.parameter_relative_error}`),
-    fault_detection_delay_s: pass(
-      m.fault_detection_delay_s,
-      m.fault_detection_delay_s !== null && m.fault_detection_delay_s < T.fault_detection_delay_s,
-      `< ${T.fault_detection_delay_s}`,
-    ),
-    quaternion_norm_max_error: pass(m.quaternion_norm_max_error, m.quaternion_norm_max_error < T.quaternion_norm_max_error, `< ${T.quaternion_norm_max_error}`),
-    run_is_deterministic: pass(true, true, "true"),
-  };
+  m.scorecard = fillScorecard(m);
   return m;
 }
 
-export function runOnce(cfg: PublicConfig, scenario: PrivateScenario): Simulator {
-  const sim = new Simulator(cfg, scenario);
+export function runOnce(
+  cfg: PublicConfig,
+  scenario: PrivateScenario,
+  controller?: AnyController,
+): Simulator {
+  const sim = new Simulator(cfg, scenario, controller);
   sim.runAll();
   return sim;
 }
@@ -383,3 +396,4 @@ export function runOnce(cfg: PublicConfig, scenario: PrivateScenario): Simulator
 void CTRL_DT;
 void DT;
 void SENS_DT;
+void SCORE_TARGETS;

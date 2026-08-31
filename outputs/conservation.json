@@ -1,0 +1,24 @@
+{
+  "dt": 0.005,
+  "duration": 2,
+  "energyDrift": -0.6123240431299317,
+  "energyRel": 0.0799000295648144,
+  "angularMomentumDrift": 2.1439360605061255,
+  "angularMomentumRel": 0.02507249924943561,
+  "linearMomentumDrift": 0,
+  "quaternionNormMax": 2.220446049250313e-16,
+  "collisionTime": null,
+  "collisionSpeed": null,
+  "qFinal": [
+    0.8775160050873612,
+    0.2979504306941286,
+    -0.26614566233996273,
+    0.2652502367243506
+  ],
+  "wFinal": [
+    0.08285709881144886,
+    -0.04313389997649452,
+    0.04708202405802481
+  ],
+  "sFinal": 0.7059353059233128
+}
