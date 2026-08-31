@@ -18,5 +18,6 @@ Physics baseline: `bdfff5b4c62733d7156d2f9cdeeaa75661d6c9f4`
 | `outputs/capture-reachability-study.quick.json` | `npx tsx src/sim/cli/run-capture-reachability.ts --quick` |
 | `outputs/belief-truth-audit-train10.json` | `npm run eval:belief-audit` |
 | `outputs/action-macro-library.json` | `npm run eval:action-macros` |
+| `outputs/wrench-nullspace-study.json` | `npm run eval:wrench-nullspace` |
 
 Do not commit `outputs/runs/`, per-seed CSV, or multi-megabyte JSON traces.

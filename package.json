@@ -30,6 +30,7 @@
     "eval:ablation-train10": "npx tsx src/sim/cli/run-ablation-train10.ts",
     "eval:belief-audit": "npx tsx src/sim/cli/run-belief-truth-audit.ts",
     "eval:action-macros": "npx tsx src/sim/cli/run-action-macros.ts",
+    "eval:wrench-nullspace": "npx tsx src/sim/cli/run-wrench-nullspace.ts",
     "optimize": "npx tsx src/sim/cli/run-optimize.ts",
     "benchmark": "npx tsx src/sim/cli/run-benchmark.ts",
     "lint": "eslint .",

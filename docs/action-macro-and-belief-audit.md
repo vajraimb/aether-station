@@ -2,6 +2,8 @@
 
 Branch: `control/action-macro-and-belief-audit` @ `99f0901` (parent `0d871b4`)
 
+Follow-on wrench / long-sequence study: `research/wrench-nullspace-and-long-sequence` — see `docs/wrench-nullspace-study.md`. Not a controller.
+
 kNN-value line remains **STOPPED**. This branch does not retune k, table size, or beam width, and does not wire a new planner. Draft PR on `control/discrete-pulse-planner-v2` stays research record.
 
 Status: **PHYSICS PASS (205/205) / KNN-VALUE ONLINE FAIL / MACROS NOT WIRED / CONTROL UNPROVEN / OVERALL FAIL**

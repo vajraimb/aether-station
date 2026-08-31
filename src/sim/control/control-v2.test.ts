@@ -12,6 +12,8 @@ import { runCaptureReachabilityTests } from "./capture-reachability.test";
 import { runCaptureValueTests } from "./capture-value.test";
 import { runBeliefMismatchTests } from "./belief-mismatch.test";
 import { runActionMacroTests } from "./action-macros.test";
+import { runWrenchGeometryTests } from "./wrench-geometry.test";
+import { runNullspaceSearchTests } from "./nullspace-search.test";
 
 interface T {
   name: string;
@@ -44,6 +46,8 @@ export function runControlV2Tests(): T[] {
   out.push(...runCaptureValueTests());
   out.push(...runBeliefMismatchTests());
   out.push(...runActionMacroTests());
+  out.push(...runWrenchGeometryTests());
+  out.push(...runNullspaceSearchTests());
 
   const plant = defaultPublicConfig({ duration: 0.8 });
   const v2 = createFlightController(plant, { mode: "discrete-pulse-v2" });
