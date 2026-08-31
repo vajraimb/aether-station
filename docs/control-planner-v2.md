@@ -7,8 +7,9 @@
 - Existing observation-only controller remains the baseline (`mode=baseline`).
 - V2 discrete pulse planner is selected with `mode=discrete-pulse-v2`.
 - Branch HEAD at the start of the hierarchical-capture round: `80e2be5d17b8c4745780ca568b1b9636426be5c7` (`f37f8b45` is not HEAD; `80e2be5d` is a smoke-artifact-only commit).
+- Hierarchical capture (guidance 5 s reduced beam + terminal frozen-kernel walk-in) is in place. Terminal entry is the public constant 12°.
 - Overall benchmark status remains **PHYSICS PASS / CONTROL FAIL / OVERALL FAIL**.
-- Train-10 stage-one attitude gate (60%) was not met. Train-50 and hidden were not run.
+- Train-10 stage-one is still not met (att 0%, fuel 90%, all-gates 0%). Train-50 and hidden were not run.
 
 See `docs/control-v2-findings.md` and `outputs/eval-comparison-train10.json`.
 
