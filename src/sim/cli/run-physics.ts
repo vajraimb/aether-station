@@ -20,6 +20,7 @@ import { Q0, W0, defaultPublicConfig } from "../constants.ts";
 import { makeRng } from "../math3d.ts";
 import { runDiscreteActionTests } from "../control/discrete-actions.test.ts";
 import { runControllerProtocolTests } from "../control/interface.test.ts";
+import { runControlV2Tests } from "../control/control-v2.test.ts";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const simDir = join(here, "..");
@@ -51,6 +52,11 @@ for (const r of runControllerProtocolTests()) {
   console.log(`${r.pass ? "PASS" : "FAIL"}  ${r.name}  ${r.detail}`);
 }
 
+for (const r of runControlV2Tests()) {
+  extra.push(r);
+  console.log(`${r.pass ? "PASS" : "FAIL"}  ${r.name}  ${r.detail}`);
+}
+
 function walk(dir: string, acc: string[] = []): string[] {
   for (const name of readdirSync(dir)) {
     const p = join(dir, name);
@@ -72,6 +78,10 @@ const ctrlFiles = [
   "control/factory.ts",
   "control/interface.ts",
   "control/discrete-actions.ts",
+  "control/rollout-model.ts",
+  "control/beam-planner.ts",
+  "control/lexicographic-cost.ts",
+  "control/controller-v2.ts",
 ].map((f) => join(simDir, f));
 for (const f of ctrlFiles) {
   const src = readFileSync(f, "utf8");
