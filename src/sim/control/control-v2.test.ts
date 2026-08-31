@@ -10,6 +10,8 @@ import { runTerminalReachableTests } from "./terminal-reachable.test";
 import { runHierarchicalTests } from "./hierarchical.test";
 import { runCaptureReachabilityTests } from "./capture-reachability.test";
 import { runCaptureValueTests } from "./capture-value.test";
+import { runBeliefMismatchTests } from "./belief-mismatch.test";
+import { runActionMacroTests } from "./action-macros.test";
 
 interface T {
   name: string;
@@ -40,6 +42,8 @@ export function runControlV2Tests(): T[] {
   out.push(...runBeamPlannerTests());
   out.push(...runCaptureReachabilityTests());
   out.push(...runCaptureValueTests());
+  out.push(...runBeliefMismatchTests());
+  out.push(...runActionMacroTests());
 
   const plant = defaultPublicConfig({ duration: 0.8 });
   const v2 = createFlightController(plant, { mode: "discrete-pulse-v2" });

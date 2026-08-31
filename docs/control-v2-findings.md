@@ -6,6 +6,8 @@ Status: **PHYSICS PASS / CAPTURE-VALUE VALIDATION PASS / ONLINE CONTROL UNPROVEN
 
 PR: **DRAFT / DO NOT MERGE**
 
+Follow-on diagnosis (macros + belief audit) lives on `control/action-macro-and-belief-audit` — see `docs/action-macro-and-belief-audit.md`. That work is not a controller.
+
 Train-50 and hidden were not run. Beam width, physics kernel, and the demo seed are unchanged.
 
 ## This round: train-10 ablation of the value heuristic

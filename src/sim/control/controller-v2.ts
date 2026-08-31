@@ -444,6 +444,10 @@ export class DiscretePulseV2Controller implements FlightController, PlantFlightC
     return best ?? this.coastPrimitive();
   }
 
+  getPendingPulses(): readonly PendingPulse[] {
+    return this.pendingPlant;
+  }
+
   diagnostics(): Readonly<ControllerDiagnostics> {
     const est = this.estimator.snapshot();
     const d = this.lastDiag;

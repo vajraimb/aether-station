@@ -38,6 +38,7 @@ outputs/trajectory.csv
 outputs/events.jsonl
 outputs/capture-reachability-study.quick.json
 outputs/reachability-dataset.quick.json
+outputs/belief-truth-audit-train10.quick.json
 
 # OS / editor
 .DS_Store

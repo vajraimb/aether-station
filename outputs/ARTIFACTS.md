@@ -16,5 +16,7 @@ Physics baseline: `bdfff5b4c62733d7156d2f9cdeeaa75661d6c9f4`
 | `src/sim/control/data/capture-value-knn.v1.json` | authoritative k-NN table (single file) |
 | `outputs/capture-value-validation.json` | grouped-split validation report |
 | `outputs/capture-reachability-study.quick.json` | `npx tsx src/sim/cli/run-capture-reachability.ts --quick` |
+| `outputs/belief-truth-audit-train10.json` | `npm run eval:belief-audit` |
+| `outputs/action-macro-library.json` | `npm run eval:action-macros` |
 
 Do not commit `outputs/runs/`, per-seed CSV, or multi-megabyte JSON traces.
