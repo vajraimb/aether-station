@@ -1,5 +1,5 @@
-import { G0, ISP, MAX_THRUST, MIN_PULSE } from '../constants'
-import type { ThrusterDefinition } from '../types'
+import { FMAX, G0, ISP, MIN_PULSE } from '../constants'
+import type { ThrusterGeom } from '../types'
 
 export const PULSE_DURATIONS_S = [
   MIN_PULSE,
@@ -36,12 +36,12 @@ const propellantFor = (thrusterCount: number, thrustN: number, durationS: number
   (thrusterCount * thrustN * durationS) / (ISP * G0)
 
 export function generatePulsePrimitives(
-  thrusters: readonly ThrusterDefinition[],
+  thrusters: readonly ThrusterGeom[],
   options: PrimitiveGenerationOptions = {},
 ): readonly PulsePrimitive[] {
   const isolated = options.isolatedThrusters ?? new Set<number>()
   const durations = options.durationsS ?? PULSE_DURATIONS_S
-  const thrustN = Math.min(Math.max(options.commandedThrustN ?? MAX_THRUST, 0), MAX_THRUST)
+  const thrustN = Math.min(Math.max(options.commandedThrustN ?? FMAX, 0), FMAX)
   const healthyIds = thrusters
     .map((thruster) => thruster.id)
     .filter((id) => !isolated.has(id))
@@ -88,15 +88,15 @@ export function generatePulsePrimitives(
 
 export function isLegalPulsePrimitive(
   primitive: Readonly<PulsePrimitive>,
-  thrusters: readonly ThrusterDefinition[],
+  thrusters: readonly ThrusterGeom[],
   isolatedThrusters: ReadonlySet<number> = new Set<number>(),
 ): boolean {
   if (primitive.thrusterIds.length > 2) return false
   if (primitive.thrusterIds.length === 0) return primitive.commandedThrustN === 0
   if (primitive.durationS + Number.EPSILON < MIN_PULSE) return false
-  if (primitive.commandedThrustN < 0 || primitive.commandedThrustN > MAX_THRUST) return false
+  if (primitive.commandedThrustN < 0 || primitive.commandedThrustN > FMAX) return false
   if (new Set(primitive.thrusterIds).size !== primitive.thrusterIds.length) return false
-  const defined = new Set(thrusters.map((thruster) => thruster.id))
+  const defined = new Set<number>(thrusters.map((thruster) => thruster.id))
   return primitive.thrusterIds.every((id) => defined.has(id) && !isolatedThrusters.has(id))
 }
 

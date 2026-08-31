@@ -19,3 +19,4 @@ export * from "./numerics";
 export * from "./planner";
 export * from "./evalset";
 export { runOfflineOptimizer, OfflinePulseController } from "./optimizer";
+export * from "./control";

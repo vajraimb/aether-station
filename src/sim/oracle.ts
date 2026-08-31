@@ -10,7 +10,7 @@ import type { PlannerOpts } from "./planner";
 import type { PublicConfig, SimState } from "./types";
 
 export class TruthFeedbackBaseline extends AgentController {
-  override readonly name = "truthFeedbackBaseline";
+  override readonly name: string = "truthFeedbackBaseline";
   private truth: SimState | null = null;
 
   constructor(cfg: PublicConfig, plannerOpts?: PlannerOpts) {
