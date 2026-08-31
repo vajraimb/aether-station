@@ -28,7 +28,12 @@ Stage-one train-10 was not met, so train-50 and hidden were not run.
 
 No bug was found that required editing `math3d.ts`, `dynamics.ts`, or `audit.ts`. Actuator geometry, 18 N, 40 ms, 120 ms delay, two-jet limit, and Isp are unchanged.
 
-## What was not done
+## CI
+
+The intended GitHub Actions workflow is checked in as `docs/control-v2-ci.yml`.
+Creating `.github/workflows/*.yml` requires the `workflow` OAuth scope, which
+the device-auth token used to push this branch does not have. Copy the file
+into `.github/workflows/control-v2.yml` from an account with that scope.
 
 - No train-50.
 - No hidden evaluation.

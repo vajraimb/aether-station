@@ -1,0 +1,27 @@
+# Copy to .github/workflows/control-v2.yml once the pushing credential
+# has the GitHub `workflow` scope. The device-auth token used in this
+# sandbox cannot create workflow files.
+name: control-v2
+
+on:
+  push:
+    branches:
+      - control/discrete-pulse-planner-v2
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci
+      - run: npm run check
+      - run: npm run test:physics -- --full
+      - run: npm run eval:smoke
