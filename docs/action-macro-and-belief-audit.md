@@ -1,6 +1,6 @@
 # Action macros and belief–truth audit
 
-Branch: `control/action-macro-and-belief-audit` (parent `0d871b4`)
+Branch: `control/action-macro-and-belief-audit` @ `99f0901` (parent `0d871b4`)
 
 kNN-value line remains **STOPPED**. This branch does not retune k, table size, or beam width, and does not wire a new planner. Draft PR on `control/discrete-pulse-planner-v2` stays research record.
 

@@ -1,5 +1,5 @@
 {
-  "commitSha": "0d871b4e45dd918edbce08b02d234b981aadf3a1",
+  "commitSha": "99f0901bad7b3d7da0ecb4d8a14ba5c0c14521dc",
   "controller": "discrete-pulse-v2",
   "plannerFamily": "original-v2",
   "knnValueLine": "STOPPED",
@@ -19,7 +19,7 @@
   ],
   "elapsed_ms": 216518,
   "timestamp": "2026-08-31T16:29:21.542Z",
-  "notes": "Belief is estimator+FDIR. Truth is plant state. Pending mismatch is controller occupancy vs plant actual at the nearest 50 ms sample. kNN-value is not used. Terminal phase overrides the fault clock when truth att ≤ 12°.",
+  "notes": "Belief is estimator+FDIR. Truth is plant state. Pending mismatch is controller occupancy vs plant actual at the nearest 50 ms sample. kNN-value is not used. Terminal phase overrides the fault clock when truth att \u2264 12\u00b0.",
   "overall": {
     "nominal": {
       "phase": "nominal",
@@ -40,7 +40,7 @@
       },
       "fuelErr": {
         "n": 6309,
-        "mean": -0.000013231869135037323,
+        "mean": -1.3231869135037323e-05,
         "p50": 0.0013223473166608102,
         "p90": 0.1076654718223562,
         "worst": 0.18280236403569994
@@ -170,7 +170,7 @@
       "fuelErr": {
         "n": 7412,
         "mean": 0.0006085536887571738,
-        "p50": 0.00007662511752570822,
+        "p50": 7.662511752570822e-05,
         "p90": 0.0825874826813564,
         "worst": 0.15565495349190606
       },
@@ -215,7 +215,7 @@
       "fuelErr": {
         "n": 7734,
         "mean": -0.000531192182566751,
-        "p50": 0.0000037324142354577816,
+        "p50": 3.7324142354577816e-06,
         "p90": 0.10516972873023045,
         "worst": 0.18280236403569994
       },
@@ -865,7 +865,7 @@
           "fuelErr": {
             "n": 473,
             "mean": -0.000802396301452775,
-            "p50": 0.0000037324142354577816,
+            "p50": 3.7324142354577816e-06,
             "p90": 0.11281143226719426,
             "worst": -0.17322728884500993
           },
@@ -1730,7 +1730,7 @@
           "fuelErr": {
             "n": 1086,
             "mean": -0.00041043646695690237,
-            "p50": -0.000028680817148796223,
+            "p50": -2.8680817148796223e-05,
             "p90": 0.08883706301799421,
             "worst": 0.1366631802399434
           },
