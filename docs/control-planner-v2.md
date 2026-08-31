@@ -4,8 +4,12 @@
 
 - Physics baseline: `bdfff5b4c62733d7156d2f9cdeeaa75661d6c9f4`
 - Physics kernel, actuator constraints, scoring gates, and UI are frozen.
-- Existing observation-only controller remains the baseline.
-- Overall benchmark status remains FAIL until the hidden-set gates pass.
+- Existing observation-only controller remains the baseline (`mode=baseline`).
+- V2 discrete pulse planner is selected with `mode=discrete-pulse-v2`.
+- Overall benchmark status remains **PHYSICS PASS / CONTROL FAIL / OVERALL FAIL**.
+- Train-10 stage-one attitude gate (60%) was not met. Train-50 and hidden were not run.
+
+See `docs/control-v2-findings.md` and `outputs/eval-comparison-train10.json`.
 
 ## Objective
 
