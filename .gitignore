@@ -1,0 +1,36 @@
+# dependencies
+node_modules/
+
+# build / preview
+.vercel/
+.tanstack/
+dist/
+.output/
+.nitro/
+
+# env / secrets
+.env
+.env.*
+!.env.example
+
+# logs
+*.log
+npm-debug.log*
+/tmp/
+
+# sandbox / local
+.grok/
+.project_id
+.node_modules.lock
+AGENTS.md
+
+# qa / scratch
+screenshots/
+artifacts/
+attachments/
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
+*.swp
