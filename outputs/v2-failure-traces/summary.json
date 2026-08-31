@@ -1,0 +1,76 @@
+{
+  "commitSha": "2a5164d135717f7c6943a15a6889aaa43df09e98",
+  "physicsBaselineSha": "bdfff5b4c62733d7156d2f9cdeeaa75661d6c9f4",
+  "controllerVersion": "discrete-pulse-v2",
+  "note": "Analysis of public train seeds. Controller has no per-seed branch.",
+  "rows": [
+    {
+      "seed": 800017,
+      "label": "wrong-way / perp (prior 99.6°)",
+      "att": 99.21232133570477,
+      "w": 0.02535618004187507,
+      "fuel": 2.8318205979548794,
+      "isolationDelay": 0.8894901226264693,
+      "isolated": 3,
+      "faultThruster": 3,
+      "phaseCounts": {
+        "guidance": 1588,
+        "terminal": 87,
+        "fallback": 125
+      },
+      "terminalReachableRate": 0,
+      "elapsed_ms": 21220
+    },
+    {
+      "seed": 800068,
+      "label": "wrong-way / perp (prior 79.5°)",
+      "att": 79.93891188179865,
+      "w": 0.029964200140108567,
+      "fuel": 2.8807672681386762,
+      "isolationDelay": 0.9755669354078265,
+      "isolated": 5,
+      "faultThruster": 5,
+      "phaseCounts": {
+        "guidance": 1704,
+        "terminal": 66,
+        "fallback": 30
+      },
+      "terminalReachableRate": 0,
+      "elapsed_ms": 22907
+    },
+    {
+      "seed": 800119,
+      "label": "best / closest-to-1° (prior 2.48°)",
+      "att": 23.822001168106077,
+      "w": 0.0065752637738331335,
+      "fuel": 2.8960030682252125,
+      "isolationDelay": 0.9091858659049237,
+      "isolated": 5,
+      "faultThruster": 5,
+      "phaseCounts": {
+        "guidance": 1098,
+        "terminal": 685,
+        "fallback": 17
+      },
+      "terminalReachableRate": 0.03,
+      "elapsed_ms": 26213
+    },
+    {
+      "seed": 800102,
+      "label": "next-closest (prior 5.86°)",
+      "att": 28.12083220992222,
+      "w": 0.010172213897536182,
+      "fuel": 2.882061900272081,
+      "isolationDelay": 2.0759468941989354,
+      "isolated": 3,
+      "faultThruster": 3,
+      "phaseCounts": {
+        "guidance": 1271,
+        "terminal": 479,
+        "fallback": 50
+      },
+      "terminalReachableRate": 0,
+      "elapsed_ms": 26127
+    }
+  ]
+}

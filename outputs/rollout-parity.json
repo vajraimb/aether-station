@@ -1,0 +1,59 @@
+{
+  "physicsBaselineSha": "bdfff5b4c62733d7156d2f9cdeeaa75661d6c9f4",
+  "controllerVersion": "discrete-pulse-v2",
+  "notes": "Rollout uses the frozen rk4/collision kernel with belief parameters, 5 ms parity dt, and the plant delay queue. Thresholds separate implementation bugs from missing CM-translation cost and slider PD mismatch.",
+  "tolerances": {
+    "attRad_0p5s": 0.02,
+    "attRad_5s": 0.08,
+    "omega_0p5s": 0.01,
+    "omega_5s": 0.04,
+    "fuel": 0.02
+  },
+  "rows": [
+    {
+      "case": "coast",
+      "duration": 0.5,
+      "attRad": 0.00014815662795651357,
+      "omegaErr": 0.0008373919555762888,
+      "fuelErr": 0,
+      "sloshErr": 0.002981821175077951,
+      "timeErr": 3.3306690738754696e-16
+    },
+    {
+      "case": "single",
+      "duration": 1,
+      "attRad": 0.0009761628982746548,
+      "omegaErr": 0.002579746681767386,
+      "fuelErr": 0,
+      "sloshErr": 0.006065131845528835,
+      "timeErr": 6.661338147750939e-16
+    },
+    {
+      "case": "pair",
+      "duration": 2,
+      "attRad": 0.005226848834108971,
+      "omegaErr": 0.005644056722381943,
+      "fuelErr": 0,
+      "sloshErr": 0.0020655634245374493,
+      "timeErr": 2.220446049250313e-16
+    },
+    {
+      "case": "delay-span",
+      "duration": 5,
+      "attRad": 0.02753984710755698,
+      "omegaErr": 0.010692305340158803,
+      "fuelErr": 0,
+      "sloshErr": 0.0014326279618707845,
+      "timeErr": 0
+    },
+    {
+      "case": "pending-at-start",
+      "duration": 2,
+      "attRad": 0.005322079879251777,
+      "omegaErr": 0.005853608252868605,
+      "fuelErr": 0,
+      "sloshErr": 0.0020099861590854285,
+      "timeErr": 0
+    }
+  ]
+}

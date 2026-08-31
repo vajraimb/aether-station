@@ -29,6 +29,16 @@ screenshots/
 artifacts/
 attachments/
 
+# bulky generated traces — regenerate via commands in outputs/ARTIFACTS.md
+outputs/runs/
+outputs/v2-failure-traces/*.csv
+outputs/v2-failure-traces/*.json
+!outputs/v2-failure-traces/summary.json
+outputs/trajectory.csv
+outputs/events.jsonl
+outputs/capture-reachability-study.quick.json
+outputs/reachability-dataset.quick.json
+
 # OS / editor
 .DS_Store
 .idea/

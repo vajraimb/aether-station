@@ -1,0 +1,36 @@
+{
+  "candidates": [
+    8,
+    10,
+    12,
+    15
+  ],
+  "rows": [
+    {
+      "entryDeg": 8,
+      "closingCaptureRate": 0,
+      "restCaptureRate": 0,
+      "n": 6
+    },
+    {
+      "entryDeg": 10,
+      "closingCaptureRate": 0,
+      "restCaptureRate": 0,
+      "n": 6
+    },
+    {
+      "entryDeg": 12,
+      "closingCaptureRate": 0,
+      "restCaptureRate": 0,
+      "n": 6
+    },
+    {
+      "entryDeg": 15,
+      "closingCaptureRate": 0,
+      "restCaptureRate": 0,
+      "n": 6
+    }
+  ],
+  "chosenDeg": 12,
+  "rule": "Fixed public constant 12°. 8–15° were measured on synthetic in-basin states; 12° keeps guidance handoff above the 5 s reduced-model att p50 (~1.5°) while remaining inside a receding-horizon walk-in. No per-seed branch."
+}

@@ -1,0 +1,150 @@
+{
+  "commitSha": "0101a0140b18adae1f413c03d8a5172369c561b4",
+  "elapsed_ms": 145939,
+  "featureSchemaVersion": "v1",
+  "trainerVersion": "knn-7-l2-scaled",
+  "k": 7,
+  "distance": "scaled-L2",
+  "featureScale": [
+    0.4,
+    0.04,
+    0.02,
+    0.08,
+    1.2,
+    2,
+    1,
+    1.2
+  ],
+  "oodThreshold": 0.5113344126838311,
+  "datasetHash": "5911251735d80e5d6e71e7ed265acbe56cfc66d1174a8891ac10d88abc137999",
+  "splitHash": "f30a0beb36d87d7d89c8d6bda75131b3348a2c137cde45b10af8f9a7644066ce",
+  "modelHash": "7932f58fd62d4592a0fd89e362c7d3586256d9108467650c02bec7300a426913",
+  "split": "grouped-family",
+  "nTrain": 300,
+  "nVal": 100,
+  "trainLabelCounts": {
+    "captured": 81,
+    "search_unreached": 219,
+    "proven_infeasible": 0
+  },
+  "valLabelCounts": {
+    "captured": 30,
+    "search_unreached": 70,
+    "proven_infeasible": 0
+  },
+  "capturedClass": {
+    "tp": 23,
+    "fp": 6,
+    "tn": 64,
+    "fn": 7,
+    "precision": 0.7931034482758621,
+    "recall": 0.7666666666666667,
+    "f1": 0.7796610169491527,
+    "prAuc": 0.8629268282483055,
+    "rocAuc": 0.9321428571428572
+  },
+  "confusionMatrix": {
+    "tp": 23,
+    "fp": 6,
+    "tn": 64,
+    "fn": 7,
+    "precision": 0.7931034482758621,
+    "recall": 0.7666666666666667,
+    "f1": 0.7796610169491527
+  },
+  "calibration": [
+    {
+      "lo": 0,
+      "hi": 0.2,
+      "n": 56,
+      "meanP": 0.020602424967924627,
+      "meanY": 0.03571428571428571
+    },
+    {
+      "lo": 0.2,
+      "hi": 0.4,
+      "n": 10,
+      "meanP": 0.29994467236503436,
+      "meanY": 0.2
+    },
+    {
+      "lo": 0.4,
+      "hi": 0.6,
+      "n": 11,
+      "meanP": 0.5111659758178237,
+      "meanY": 0.5454545454545454
+    },
+    {
+      "lo": 0.6,
+      "hi": 0.8,
+      "n": 8,
+      "meanP": 0.6606580663488216,
+      "meanY": 0.75
+    },
+    {
+      "lo": 0.8,
+      "hi": 1,
+      "n": 15,
+      "meanP": 0.9068088244145917,
+      "meanY": 0.9333333333333333
+    }
+  ],
+  "byAttitudeBucket": {
+    ">=15": {
+      "n": 20,
+      "captured": 0,
+      "recall": null
+    },
+    "8-15": {
+      "n": 20,
+      "captured": 0,
+      "recall": null
+    },
+    "3-8": {
+      "n": 40,
+      "captured": 11,
+      "recall": 0.8181818181818182
+    },
+    "<3": {
+      "n": 20,
+      "captured": 19,
+      "recall": 0.7368421052631579
+    }
+  },
+  "byFaultMask": {
+    "isolated": {
+      "n": 50,
+      "tp": 6,
+      "fp": 1,
+      "tn": 36,
+      "fn": 7,
+      "precision": 0.8571428571428571,
+      "recall": 0.46153846153846156,
+      "f1": 0.6
+    },
+    "healthy": {
+      "n": 50,
+      "tp": 17,
+      "fp": 5,
+      "tn": 28,
+      "fn": 0,
+      "precision": 0.7727272727272727,
+      "recall": 1,
+      "f1": 0.8717948717948718
+    }
+  },
+  "nearestNeighborDistance": {
+    "p50": 0.2204191809936095,
+    "p90": 0.5239030660722338,
+    "worst": 0.6813645376134467,
+    "trainP50": 0.1704448042279437,
+    "trainP90": 0.27585037970262394
+  },
+  "ood": {
+    "threshold": 0.5113344126838311,
+    "valRate": 0.13,
+    "policy": "if nnDist > threshold, ignore k-NN cost and use eigen heuristic"
+  },
+  "valMae": 22.866034516965907,
+  "note": "Labels are budgeted-search outcomes. search_unreached is not proven_infeasible. Accuracy is omitted because the negative class dominates."
+}

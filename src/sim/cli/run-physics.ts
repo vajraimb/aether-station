@@ -4,6 +4,7 @@
  *   npm run test:physics
  *   npm run test:physics -- --full   # 180 s at every dt
  */
+import { execSync } from "node:child_process";
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -17,6 +18,9 @@ import { OBSERVATION_KEYS } from "../types.ts";
 import type { Observation, PrivateScenario, SimEvent, ThrusterIndex } from "../types.ts";
 import { Q0, W0, defaultPublicConfig } from "../constants.ts";
 import { makeRng } from "../math3d.ts";
+import { runDiscreteActionTests } from "../control/discrete-actions.test.ts";
+import { runControllerProtocolTests } from "../control/interface.test.ts";
+import { runControlV2Tests } from "../control/control-v2.test.ts";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const simDir = join(here, "..");
@@ -38,6 +42,21 @@ for (const r of unit) {
   console.log(`${r.pass ? "PASS" : "FAIL"}  ${r.name}  ${r.detail}`);
 }
 
+for (const name of runDiscreteActionTests()) {
+  extra.push({ name: `discrete:${name}`, pass: true, detail: "ok" });
+  console.log(`PASS  discrete:${name}  ok`);
+}
+
+for (const r of runControllerProtocolTests()) {
+  extra.push(r);
+  console.log(`${r.pass ? "PASS" : "FAIL"}  ${r.name}  ${r.detail}`);
+}
+
+for (const r of runControlV2Tests()) {
+  extra.push(r);
+  console.log(`${r.pass ? "PASS" : "FAIL"}  ${r.name}  ${r.detail}`);
+}
+
 function walk(dir: string, acc: string[] = []): string[] {
   for (const name of readdirSync(dir)) {
     const p = join(dir, name);
@@ -49,7 +68,25 @@ function walk(dir: string, acc: string[] = []): string[] {
 }
 void walk;
 
-const ctrlFiles = ["controller.ts", "allocate.ts", "fdir.ts", "estimator.ts", "planner.ts"].map((f) => join(simDir, f));
+const ctrlFiles = [
+  "controller.ts",
+  "allocate.ts",
+  "fdir.ts",
+  "estimator.ts",
+  "planner.ts",
+  "control/baseline.ts",
+  "control/factory.ts",
+  "control/interface.ts",
+  "control/discrete-actions.ts",
+  "control/rollout-model.ts",
+  "control/rollout-error.ts",
+  "control/beam-planner.ts",
+  "control/lexicographic-cost.ts",
+  "control/terminal-planner.ts",
+  "control/terminal-reachable.ts",
+  "control/guidance-planner.ts",
+  "control/controller-v2.ts",
+].map((f) => join(simDir, f));
 for (const f of ctrlFiles) {
   const src = readFileSync(f, "utf8");
   const banned = [];
@@ -250,6 +287,19 @@ check(
   `cons=${rx.dEdtResidualConservative.toExponential(2)} damp=${rx.dEdtResidualDamped.toExponential(2)} act=${rx.dEdtResidualActuated.toExponential(2)}`,
 );
 writeLedgers(8, 0.005);
+
+{
+  let diff = "";
+  try {
+    diff = execSync(
+      "git diff --name-only bdfff5b4c62733d7156d2f9cdeeaa75661d6c9f4 -- src/sim/math3d.ts src/sim/dynamics.ts src/sim/audit.ts",
+      { encoding: "utf8" },
+    ).trim();
+  } catch (e) {
+    diff = String(e);
+  }
+  check("test_physics_baseline_unchanged", diff === "", diff === "" ? "math3d/dynamics/audit match bdfff5b" : diff);
+}
 
 const all = [...unit, ...extra];
 const fail = all.filter((t) => !t.pass).length;

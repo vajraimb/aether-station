@@ -102,11 +102,17 @@ export const OBSERVATION_KEYS = [
   "actuatorResponseAbnormal",
 ] as const;
 
+export interface ThrusterCommand {
+  id: number;
+  pulseWidthS: number;
+}
+
 export interface Command {
   sliderForce: number;
   /** Requested on-time in seconds for this 0.1 s cycle, 0 or >= minPulse. */
   pulseWidth: [number, number, number, number, number, number];
 }
+
 
 export interface SimEvent {
   t: number;

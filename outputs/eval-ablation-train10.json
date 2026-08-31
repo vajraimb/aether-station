@@ -1,0 +1,584 @@
+{
+  "commitSha": "c0d80f81bab63d1195d18cd5632cf6c4daf1c9d1",
+  "branch": "control/discrete-pulse-planner-v2",
+  "physicsBaselineSha": "bdfff5b4c62733d7156d2f9cdeeaa75661d6c9f4",
+  "set": "train",
+  "count": 10,
+  "timestamp": "2026-08-31T15:43:40.413119+00:00",
+  "note": "Four-family ablation, beamWidth 28. Hidden blocked. Demo seed untouched. Choice-log correlation omitted after a mid-run recycle; kNN query/OOD counts retained per seed.",
+  "rates": {
+    "baseline": {
+      "allGates": 0.0,
+      "attitude": 0.1,
+      "rate": 0.8,
+      "fuel": 1.0,
+      "param": 0.3,
+      "fdir": 1.0
+    },
+    "originalV2": {
+      "allGates": 0.0,
+      "attitude": 0.0,
+      "rate": 0.8,
+      "fuel": 1.0,
+      "param": 0.5,
+      "fdir": 1.0
+    },
+    "hierarchicalV2": {
+      "allGates": 0.0,
+      "attitude": 0.0,
+      "rate": 0.0,
+      "fuel": 0.9,
+      "param": 0.1,
+      "fdir": 1.0
+    },
+    "knnValueV2": {
+      "allGates": 0.0,
+      "attitude": 0.0,
+      "rate": 0.3,
+      "fuel": 1.0,
+      "param": 0.2,
+      "fdir": 1.0
+    }
+  },
+  "stats": {
+    "baseline": {
+      "att": {
+        "median": 16.32,
+        "p90": 61.7,
+        "worst": 75.99,
+        "best": 0.88
+      },
+      "fuel": {
+        "median": 2.88,
+        "p90": 3.533,
+        "worst": 3.568,
+        "best": 2.821
+      },
+      "omega": {
+        "median": 0.0037,
+        "p90": 0.0157,
+        "worst": 0.0162,
+        "best": 0.0014
+      }
+    },
+    "originalV2": {
+      "att": {
+        "median": 9.91,
+        "p90": 79.46,
+        "worst": 99.58,
+        "best": 2.48
+      },
+      "fuel": {
+        "median": 2.868,
+        "p90": 3.42,
+        "worst": 3.427,
+        "best": 2.831
+      },
+      "omega": {
+        "median": 0.0026,
+        "p90": 0.0155,
+        "worst": 0.0418,
+        "best": 0.0018
+      }
+    },
+    "hierarchicalV2": {
+      "att": {
+        "median": 28.12,
+        "p90": 100.02,
+        "worst": 115.72,
+        "best": 10.49
+      },
+      "fuel": {
+        "median": 2.813,
+        "p90": 2.875,
+        "worst": 2.877,
+        "best": 2.795
+      },
+      "omega": {
+        "median": 0.0127,
+        "p90": 0.0254,
+        "worst": 0.0269,
+        "best": 0.0082
+      }
+    },
+    "knnValueV2": {
+      "att": {
+        "median": 49.96,
+        "p90": 102.85942587669803,
+        "worst": 117.50999902619412,
+        "best": 22.16
+      },
+      "fuel": {
+        "median": 2.911,
+        "p90": 3.235,
+        "worst": 3.248,
+        "best": 2.805
+      },
+      "omega": {
+        "median": 0.0337,
+        "p90": 0.0711408810426962,
+        "worst": 0.0749,
+        "best": 0.0048
+      }
+    }
+  },
+  "knnInstrumentation": {
+    "queryCountTotal": 7711455,
+    "oodFallbackTotal": 7367070,
+    "oodRate": 0.9553411126693989,
+    "meanNnDistTailSeeds": 3.856,
+    "captureCostVsFinalAttPearson": null,
+    "guidanceChoiceChangedVsHierarchical": null,
+    "note": "Online kNN is almost entirely OOD (fallback to eigen heuristic). meanNnDist and capture-cost correlation only from seeds 800136/800153 after recycle."
+  },
+  "perSeed": [
+    {
+      "seed": 800000,
+      "versions": {
+        "baseline": {
+          "att": 9.4,
+          "w": 0.0031,
+          "fuel": 2.88,
+          "param": 0.106,
+          "fdir": 1,
+          "allGates": false
+        },
+        "originalV2": {
+          "att": 5.99,
+          "w": 0.0019,
+          "fuel": 3.427,
+          "param": 0.119,
+          "fdir": 1,
+          "allGates": false
+        },
+        "hierarchicalV2": {
+          "att": 84.29,
+          "w": 0.0215,
+          "fuel": 2.813,
+          "param": 0.203,
+          "fdir": 1,
+          "allGates": false
+        },
+        "knnValueV2": {
+          "att": 90.24,
+          "w": 0.0697,
+          "fuel": 2.961,
+          "param": 0.185,
+          "fdir": 1,
+          "allGates": false,
+          "knnQueryCount": 828315,
+          "oodFallbackCount": 815708,
+          "meanNnDist": null,
+          "meanCaptureCost": null
+        }
+      },
+      "deltaAttKnnVsHier": 5.949999999999989,
+      "deltaFuelKnnVsHier": 0.1479999999999997,
+      "deltaWKnnVsHier": 0.0482
+    },
+    {
+      "seed": 800017,
+      "versions": {
+        "baseline": {
+          "att": 61.7,
+          "w": 0.0157,
+          "fuel": 2.842,
+          "param": 0.185,
+          "fdir": 1,
+          "allGates": false
+        },
+        "originalV2": {
+          "att": 99.58,
+          "w": 0.0418,
+          "fuel": 2.837,
+          "param": 0.161,
+          "fdir": 1,
+          "allGates": false
+        },
+        "hierarchicalV2": {
+          "att": 100.02,
+          "w": 0.0254,
+          "fuel": 2.826,
+          "param": 0.198,
+          "fdir": 1,
+          "allGates": false
+        },
+        "knnValueV2": {
+          "att": 49.96,
+          "w": 0.0698,
+          "fuel": 2.915,
+          "param": 0.226,
+          "fdir": 1,
+          "allGates": false,
+          "knnQueryCount": 813510,
+          "oodFallbackCount": 807213,
+          "meanNnDist": null,
+          "meanCaptureCost": null
+        }
+      },
+      "deltaAttKnnVsHier": -50.059999999999995,
+      "deltaFuelKnnVsHier": 0.08899999999999997,
+      "deltaWKnnVsHier": 0.0444
+    },
+    {
+      "seed": 800034,
+      "versions": {
+        "baseline": {
+          "att": 75.99,
+          "w": 0.0162,
+          "fuel": 2.84,
+          "param": 0.219,
+          "fdir": 1,
+          "allGates": false
+        },
+        "originalV2": {
+          "att": 9.31,
+          "w": 0.0044,
+          "fuel": 2.868,
+          "param": 0.196,
+          "fdir": 1,
+          "allGates": false
+        },
+        "hierarchicalV2": {
+          "att": 19.97,
+          "w": 0.0105,
+          "fuel": 2.806,
+          "param": 0.211,
+          "fdir": 1,
+          "allGates": false
+        },
+        "knnValueV2": {
+          "att": 66.2,
+          "w": 0.0048,
+          "fuel": 3.248,
+          "param": 0.178,
+          "fdir": 1,
+          "allGates": false,
+          "knnQueryCount": 878496,
+          "oodFallbackCount": 878496,
+          "meanNnDist": null,
+          "meanCaptureCost": null
+        }
+      },
+      "deltaAttKnnVsHier": 46.230000000000004,
+      "deltaFuelKnnVsHier": 0.44200000000000017,
+      "deltaWKnnVsHier": -0.005700000000000001
+    },
+    {
+      "seed": 800051,
+      "versions": {
+        "baseline": {
+          "att": 20.07,
+          "w": 0.0041,
+          "fuel": 2.851,
+          "param": 0.307,
+          "fdir": 1,
+          "allGates": false
+        },
+        "originalV2": {
+          "att": 11.92,
+          "w": 0.0043,
+          "fuel": 2.831,
+          "param": 0.276,
+          "fdir": 1,
+          "allGates": false
+        },
+        "hierarchicalV2": {
+          "att": 23.67,
+          "w": 0.0121,
+          "fuel": 2.795,
+          "param": 0.293,
+          "fdir": 1,
+          "allGates": false
+        },
+        "knnValueV2": {
+          "att": 86.33,
+          "w": 0.0337,
+          "fuel": 2.805,
+          "param": 0.303,
+          "fdir": 1,
+          "allGates": false,
+          "knnQueryCount": 738717,
+          "oodFallbackCount": 734513,
+          "meanNnDist": null,
+          "meanCaptureCost": null
+        }
+      },
+      "deltaAttKnnVsHier": 62.66,
+      "deltaFuelKnnVsHier": 0.010000000000000231,
+      "deltaWKnnVsHier": 0.0216
+    },
+    {
+      "seed": 800068,
+      "versions": {
+        "baseline": {
+          "att": 4.99,
+          "w": 0.0025,
+          "fuel": 2.909,
+          "param": 0.169,
+          "fdir": 1,
+          "allGates": false
+        },
+        "originalV2": {
+          "att": 79.46,
+          "w": 0.0155,
+          "fuel": 2.995,
+          "param": 0.161,
+          "fdir": 1,
+          "allGates": false
+        },
+        "hierarchicalV2": {
+          "att": 80.91,
+          "w": 0.0197,
+          "fuel": 2.877,
+          "param": 0.186,
+          "fdir": 1,
+          "allGates": false
+        },
+        "knnValueV2": {
+          "att": 28.96,
+          "w": 0.0749,
+          "fuel": 2.928,
+          "param": 0.212,
+          "fdir": 1,
+          "allGates": false,
+          "knnQueryCount": 802371,
+          "oodFallbackCount": 791194,
+          "meanNnDist": null,
+          "meanCaptureCost": null
+        }
+      },
+      "deltaAttKnnVsHier": -51.949999999999996,
+      "deltaFuelKnnVsHier": 0.051000000000000156,
+      "deltaWKnnVsHier": 0.0552
+    },
+    {
+      "seed": 800085,
+      "versions": {
+        "baseline": {
+          "att": 8.98,
+          "w": 0.0024,
+          "fuel": 2.821,
+          "param": 0.142,
+          "fdir": 1,
+          "allGates": false
+        },
+        "originalV2": {
+          "att": 13.61,
+          "w": 0.0026,
+          "fuel": 3.383,
+          "param": 0.132,
+          "fdir": 1,
+          "allGates": false
+        },
+        "hierarchicalV2": {
+          "att": 98.08,
+          "w": 0.0254,
+          "fuel": 2.875,
+          "param": 0.187,
+          "fdir": 1,
+          "allGates": false
+        },
+        "knnValueV2": {
+          "att": 45.51,
+          "w": 0.022,
+          "fuel": 3.235,
+          "param": 0.181,
+          "fdir": 1,
+          "allGates": false,
+          "knnQueryCount": 689028,
+          "oodFallbackCount": 558110,
+          "meanNnDist": null,
+          "meanCaptureCost": null
+        }
+      },
+      "deltaAttKnnVsHier": -52.57,
+      "deltaFuelKnnVsHier": 0.3599999999999999,
+      "deltaWKnnVsHier": -0.0034000000000000002
+    },
+    {
+      "seed": 800102,
+      "versions": {
+        "baseline": {
+          "att": 0.88,
+          "w": 0.0014,
+          "fuel": 3.568,
+          "param": 0.242,
+          "fdir": 1,
+          "allGates": false
+        },
+        "originalV2": {
+          "att": 5.86,
+          "w": 0.0022,
+          "fuel": 3.118,
+          "param": 0.125,
+          "fdir": 1,
+          "allGates": false
+        },
+        "hierarchicalV2": {
+          "att": 28.12,
+          "w": 0.0102,
+          "fuel": 2.865,
+          "param": 0.122,
+          "fdir": 1,
+          "allGates": false
+        },
+        "knnValueV2": {
+          "att": 22.16,
+          "w": 0.0063,
+          "fuel": 2.877,
+          "param": 0.153,
+          "fdir": 1,
+          "allGates": false,
+          "knnQueryCount": 535414,
+          "oodFallbackCount": 505771,
+          "meanNnDist": null,
+          "meanCaptureCost": null
+        }
+      },
+      "deltaAttKnnVsHier": -5.960000000000001,
+      "deltaFuelKnnVsHier": 0.011999999999999567,
+      "deltaWKnnVsHier": -0.0039000000000000007
+    },
+    {
+      "seed": 800119,
+      "versions": {
+        "baseline": {
+          "att": 41.35,
+          "w": 0.0051,
+          "fuel": 3.533,
+          "param": 0.16,
+          "fdir": 1,
+          "allGates": false
+        },
+        "originalV2": {
+          "att": 2.48,
+          "w": 0.0018,
+          "fuel": 3.42,
+          "param": 0.106,
+          "fdir": 1,
+          "allGates": false
+        },
+        "hierarchicalV2": {
+          "att": 27.98,
+          "w": 0.0082,
+          "fuel": 2.855,
+          "param": 0.169,
+          "fdir": 1,
+          "allGates": false
+        },
+        "knnValueV2": {
+          "att": 42.54,
+          "w": 0.0052,
+          "fuel": 2.911,
+          "param": 0.123,
+          "fdir": 1,
+          "allGates": false,
+          "knnQueryCount": 886477,
+          "oodFallbackCount": 737419,
+          "meanNnDist": null,
+          "meanCaptureCost": null
+        }
+      },
+      "deltaAttKnnVsHier": 14.559999999999999,
+      "deltaFuelKnnVsHier": 0.05600000000000005,
+      "deltaWKnnVsHier": -0.003000000000000001
+    },
+    {
+      "seed": 800136,
+      "versions": {
+        "baseline": {
+          "att": 25.85,
+          "w": 0.0049,
+          "fuel": 2.93,
+          "param": 0.232,
+          "fdir": 1,
+          "allGates": false
+        },
+        "originalV2": {
+          "att": 9.91,
+          "w": 0.0046,
+          "fuel": 2.845,
+          "param": 0.216,
+          "fdir": 1,
+          "allGates": false
+        },
+        "hierarchicalV2": {
+          "att": 10.49,
+          "w": 0.0127,
+          "fuel": 2.81,
+          "param": 0.194,
+          "fdir": 1,
+          "allGates": false
+        },
+        "knnValueV2": {
+          "att": 102.85942587669803,
+          "w": 0.0711408810426962,
+          "fuel": 2.905401761919243,
+          "param": 0.216600081261272,
+          "fdir": 1,
+          "allGates": false,
+          "knnQueryCount": 853895,
+          "oodFallbackCount": 853895,
+          "meanNnDist": 4.742888815593839,
+          "meanCaptureCost": 38.016914231457235
+        }
+      },
+      "deltaAttKnnVsHier": 92.36942587669803,
+      "deltaFuelKnnVsHier": 0.0954017619192431,
+      "deltaWKnnVsHier": 0.058440881042696194
+    },
+    {
+      "seed": 800153,
+      "versions": {
+        "baseline": {
+          "att": 16.32,
+          "w": 0.0037,
+          "fuel": 3.003,
+          "param": 0.103,
+          "fdir": 1,
+          "allGates": false
+        },
+        "originalV2": {
+          "att": 10.84,
+          "w": 0.0022,
+          "fuel": 2.835,
+          "param": 0.137,
+          "fdir": 1,
+          "allGates": false
+        },
+        "hierarchicalV2": {
+          "att": 115.72,
+          "w": 0.0269,
+          "fuel": 2.806,
+          "param": 0.164,
+          "fdir": 1,
+          "allGates": false
+        },
+        "knnValueV2": {
+          "att": 117.50999902619412,
+          "w": 0.070303596594281,
+          "fuel": 2.8171539508654373,
+          "param": 0.12725493031851082,
+          "fdir": 1,
+          "allGates": false,
+          "knnQueryCount": 685232,
+          "oodFallbackCount": 684751,
+          "meanNnDist": 2.969917212124721,
+          "meanCaptureCost": 25.472314152615166
+        }
+      },
+      "deltaAttKnnVsHier": 1.789999026194124,
+      "deltaFuelKnnVsHier": 0.011153950865437245,
+      "deltaWKnnVsHier": 0.043403596594280995
+    }
+  ],
+  "stageOne": {
+    "attitude60": false,
+    "fuel100": true,
+    "fdir100": true,
+    "allGatesPositive": false,
+    "allowedTrain50": false
+  },
+  "verdict": "PHYSICS PASS / CAPTURE-VALUE VALIDATION PASS / ONLINE CONTROL UNPROVEN (0/10) / STOP kNN-VALUE LINE / OVERALL FAIL / PR DRAFT"
+}
