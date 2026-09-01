@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Link } from "@tanstack/react-router";
 import {
   Activity,
   FlaskConical,
@@ -288,6 +289,17 @@ export function MissionApp() {
           </div>
           <h1 className="font-display text-xl font-semibold tracking-tight">AETHER</h1>
         </div>
+        <nav className="flex gap-1">
+          <span className="inline-flex h-11 items-center rounded-lg bg-bg-subtle px-3 text-sm text-fg shadow-[var(--shadow-border)]">
+            Station
+          </span>
+          <Link
+            to="/cislunar"
+            className="inline-flex h-11 items-center rounded-lg px-3 text-sm text-fg-muted hover:bg-bg-hover hover:text-fg"
+          >
+            Cislunar
+          </Link>
+        </nav>
         <div className="font-mono text-xs tabular-nums text-fg-muted">
           T+{fmt(sample.t, 2)} s · seed {seed}
         </div>
