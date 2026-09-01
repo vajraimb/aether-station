@@ -101,6 +101,39 @@ export function makeMoonTexture(): THREE.CanvasTexture {
   return tex;
 }
 
+export function makeMarsTexture(): THREE.CanvasTexture {
+  const w = 512;
+  const h = 256;
+  const c = document.createElement("canvas");
+  c.width = w;
+  c.height = h;
+  const ctx = c.getContext("2d")!;
+  const img = ctx.createImageData(w, h);
+  for (let y = 0; y < h; y++) {
+    const lat = 1 - (2 * y) / h;
+    for (let x = 0; x < w; x++) {
+      const n = fbm((x / w) * 9, lat * 4.5);
+      const ice = Math.abs(lat) > 0.82 + n * 0.06;
+      const i = (y * w + x) * 4;
+      if (ice) {
+        img.data[i] = 232;
+        img.data[i + 1] = 220;
+        img.data[i + 2] = 200;
+      } else {
+        img.data[i] = Math.round(140 + n * 70);
+        img.data[i + 1] = Math.round(70 + n * 40);
+        img.data[i + 2] = Math.round(40 + n * 18);
+      }
+      img.data[i + 3] = 255;
+    }
+  }
+  ctx.putImageData(img, 0, 0);
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.needsUpdate = true;
+  return tex;
+}
+
 export function makeSunDiskTexture(): THREE.CanvasTexture {
   const s = 256;
   const c = document.createElement("canvas");

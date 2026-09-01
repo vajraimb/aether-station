@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { Link } from "@tanstack/react-router";
 import { Pause, Play, Repeat, RotateCcw, SkipForward } from "lucide-react";
-import { PHASE_LABEL, isLunarPhase, type Phase } from "../../domains/cislunar/constants";
+import { PHASE_LABEL, isHelioPhase, isLunarPhase, isMarsPhase, type Phase } from "../../domains/cislunar/constants";
 import { buildCislunarMission, sampleAt } from "../../domains/cislunar/trajectory";
 import { CislunarCanvas } from "@/viz/CislunarCanvas";
 import type { CameraMode } from "@/viz/cislunar-types";
@@ -13,6 +13,11 @@ const AUTO_WARP: Record<Phase, number> = {
   loi: 40,
   llo: 2500,
   revolution: 120000,
+  tmi: 40,
+  heliocoast: 400000,
+  moi: 40,
+  lmo: 2500,
+  marsrev: 900000,
 };
 
 const WARPS: { label: string; value: number | "auto" }[] = [
@@ -20,7 +25,7 @@ const WARPS: { label: string; value: number | "auto" }[] = [
   { label: "1k×", value: 1_000 },
   { label: "10k×", value: 10_000 },
   { label: "100k×", value: 100_000 },
-  { label: "250k×", value: 250_000 },
+  { label: "1M×", value: 1_000_000 },
 ];
 
 function fmtTime(t: number): string {
@@ -29,6 +34,10 @@ function fmtTime(t: number): string {
   const m = Math.floor((t % 3600) / 60);
   if (d > 0) return `${d}d ${h}h ${m}m`;
   return `${h}h ${m}m`;
+}
+
+function sunDistKm(sample: { r: [number, number, number] }): number {
+  return Math.hypot(sample.r[0], sample.r[1], sample.r[2]);
 }
 
 function Chip({
@@ -79,6 +88,7 @@ const CAMERAS: { id: CameraMode; label: string }[] = [
   { id: "overview", label: "System" },
   { id: "earth", label: "Earth" },
   { id: "moon", label: "Moon" },
+  { id: "mars", label: "Mars" },
   { id: "craft", label: "Craft" },
 ];
 
@@ -233,6 +243,10 @@ export function CislunarApp() {
     sample.t <= mission.tCapture
       ? 0
       : Math.min(360, ((sample.t - mission.tCapture) / mission.periodMoon) * 360);
+  const marsDeg =
+    sample.t <= mission.tMoi
+      ? 0
+      : Math.min(360, ((sample.t - mission.tMoi) / mission.periodMars) * 360);
 
   useEffect(() => {
     const prev = prevPhase.current;
@@ -240,6 +254,9 @@ export function CislunarApp() {
     if (prev === phase || prev === null) return;
     if (phase === "llo" && (mode === "earth" || mode === "overview")) setMode("moon");
     if (phase === "revolution") setMode("overview");
+    if (phase === "tmi" || phase === "heliocoast") setMode("overview");
+    if (phase === "lmo") setMode("mars");
+    if (phase === "marsrev") setMode("overview");
   }, [phase, mode]);
 
   const start = () => {
@@ -256,8 +273,8 @@ export function CislunarApp() {
     <main className="flex min-h-dvh flex-col bg-bg text-fg">
       <header className="flex flex-wrap items-center gap-3 border-b border-border px-4 py-3">
         <div className="min-w-0 flex-1">
-          <div className="text-2xs font-medium uppercase tracking-[0.22em] text-fg-subtle">Cislunar flight</div>
-          <h1 className="font-display text-xl font-semibold tracking-tight">Earth → Moon</h1>
+          <div className="text-2xs font-medium uppercase tracking-[0.22em] text-fg-subtle">Deep space flight</div>
+          <h1 className="font-display text-xl font-semibold tracking-tight">Earth → Moon → Mars</h1>
         </div>
         <nav className="flex gap-1">
           <Link
@@ -283,17 +300,17 @@ export function CislunarApp() {
               <div className="text-2xs font-medium uppercase tracking-[0.18em] text-fg-subtle">
                 Patched-conic visualization
               </div>
-              <h2 className="mt-1 text-2xl font-semibold tracking-tight">Earth to lunar orbit</h2>
+              <h2 className="mt-1 text-2xl font-semibold tracking-tight">Earth to Moon to Mars</h2>
               <p className="mt-3 text-sm leading-relaxed text-fg-muted">
-                LEO parking, trans-lunar injection, capture into a 100 km lunar orbit, then
-                the probe stays in LLO while the Moon completes one full revolution around
-                Earth. Drag to orbit, scroll to zoom. System view shows the whole circuit.
+                LEO parking, lunar capture, one Moon revolution around Earth, then a
+                Hohmann transfer to Mars. The probe stays in low Mars orbit while Mars
+                completes one trip around the Sun. Drag to orbit, scroll to zoom.
               </p>
               <ul className="mt-4 space-y-1.5 font-mono text-xs text-fg-muted">
-                <li>TLI Δv ≈ {mission.dvTli.toFixed(2)} km/s</li>
-                <li>Coast {(mission.tofCoast / 86400).toFixed(2)} days · Moon 384,400 km</li>
-                <li>LLO 100 km · {(mission.periodLlo / 3600).toFixed(1)} h period</li>
-                <li>Moon around Earth {(mission.periodMoon / 86400).toFixed(2)} days</li>
+                <li>TLI Δv ≈ {mission.dvTli.toFixed(2)} km/s · TMI Δv ≈ {mission.dvTmi.toFixed(2)} km/s</li>
+                <li>Moon coast {(mission.tofCoast / 86400).toFixed(2)} d · Mars coast {(mission.tofHelio / 86400).toFixed(1)} d</li>
+                <li>LLO 100 km · LMO 250 km</li>
+                <li>Mars year {(mission.periodMars / 86400).toFixed(0)} days</li>
               </ul>
               <div className="mt-5">
                 <Btn onClick={start} active>
@@ -313,19 +330,29 @@ export function CislunarApp() {
               <Chip label="Phase" value={PHASE_LABEL[phase]} tone="ok" />
               <Chip label="Mission time" value={fmtTime(sample.t)} />
               <Chip
-                label={isLunarPhase(phase) ? "Moon altitude" : "Earth altitude"}
+                label={
+                  isMarsPhase(phase) ? "Mars altitude" : isLunarPhase(phase) ? "Moon altitude" : isHelioPhase(phase) ? "Sun distance" : "Earth altitude"
+                }
                 value={
-                  (isLunarPhase(phase) ? sample.altMoon : sample.altEarth) > 2000
-                    ? `${((isLunarPhase(phase) ? sample.altMoon : sample.altEarth) / 1000).toFixed(0)} Mm`
-                    : `${(isLunarPhase(phase) ? sample.altMoon : sample.altEarth).toFixed(0)} km`
+                  isMarsPhase(phase)
+                    ? `${sample.altMars.toFixed(0)} km`
+                    : isHelioPhase(phase)
+                      ? `${(sunDistKm(sample) / 1.495978707e8).toFixed(3)} AU`
+                      : (isLunarPhase(phase) ? sample.altMoon : sample.altEarth) > 2000
+                        ? `${((isLunarPhase(phase) ? sample.altMoon : sample.altEarth) / 1000).toFixed(0)} Mm`
+                        : `${(isLunarPhase(phase) ? sample.altMoon : sample.altEarth).toFixed(0)} km`
                 }
               />
               <Chip
-                label={phase === "revolution" ? "Moon orbit" : "Speed"}
+                label={phase === "marsrev" ? "Mars orbit" : phase === "revolution" ? "Moon orbit" : "Speed"}
                 value={
-                  phase === "revolution" ? `${moonDeg.toFixed(0)}°` : `${sample.speed.toFixed(2)} km/s`
+                  phase === "marsrev"
+                    ? `${marsDeg.toFixed(0)}°`
+                    : phase === "revolution"
+                      ? `${moonDeg.toFixed(0)}°`
+                      : `${sample.speed.toFixed(2)} km/s`
                 }
-                tone={phase === "revolution" ? "ok" : "muted"}
+                tone={phase === "revolution" || phase === "marsrev" ? "ok" : "muted"}
               />
             </div>
             <div className="flex flex-wrap items-center gap-2">

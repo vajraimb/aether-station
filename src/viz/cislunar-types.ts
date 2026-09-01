@@ -1,1 +1,1 @@
-export type CameraMode = "overview" | "earth" | "moon" | "craft";
+export type CameraMode = "overview" | "earth" | "moon" | "mars" | "craft";

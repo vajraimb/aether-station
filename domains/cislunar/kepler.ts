@@ -56,3 +56,16 @@ export function circularState(
     v: [-radius * w * s, 0, radius * w * c],
   };
 }
+
+export function rotateXZ(
+  r: [number, number, number],
+  v: [number, number, number],
+  th: number,
+): { r: [number, number, number]; v: [number, number, number] } {
+  const c = Math.cos(th);
+  const s = Math.sin(th);
+  return {
+    r: [r[0] * c - r[2] * s, r[1], r[0] * s + r[2] * c],
+    v: [v[0] * c - v[2] * s, v[1], v[0] * s + v[2] * c],
+  };
+}
