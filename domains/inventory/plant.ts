@@ -1,5 +1,5 @@
 import { poisson } from "./rng";
-import type { InventoryPrivateScenario, InventoryPublicConfig, InventoryTruth } from "./types";
+import type { InventoryAction, InventoryPrivateScenario, InventoryPublicConfig, InventoryTruth, OrderUpdate, PendingOrder } from "./types";
 
 export function supplierHealthyAt(sc: InventoryPrivateScenario, day: number): boolean {
   if (sc.supplierFailDay === null) return true;
@@ -59,3 +59,51 @@ export function stepPlant(
     ordersToday: 0,
   };
 }
+
+export function onOrderQty(truth: InventoryTruth): number {
+  return truth.pendingOrders.reduce((s, o) => s + o.quantity, 0);
+}
+
+export function applyAction(
+  truth: InventoryTruth,
+  cfg: InventoryPublicConfig,
+  action: InventoryAction,
+): { truth: InventoryTruth; updates: OrderUpdate[]; rejected: boolean } {
+  if (action.kind === "coast") return { truth, updates: [], rejected: false };
+  const qty = Math.floor(action.quantity);
+  let violations = 0;
+  if (qty < cfg.minOrderQty) violations += 1;
+  if (truth.ordersToday >= cfg.maxOrdersPerDay) violations += 1;
+  const lead = action.kind === "rush-order" ? cfg.rushLead : cfg.normalLead;
+  const unit = action.kind === "rush-order" ? cfg.unitCost * cfg.rushMultiplier : cfg.unitCost;
+  const cost = qty * unit;
+  if (cost > truth.cash) violations += 1;
+  if (truth.onHand + onOrderQty(truth) + qty > cfg.capacity) violations += 1;
+  if (violations > 0) {
+    return {
+      truth: { ...truth, constraintViolations: truth.constraintViolations + violations },
+      updates: [],
+      rejected: true,
+    };
+  }
+  const order: PendingOrder = {
+    id: `o${truth.time}-${truth.ordersToday}`,
+    quantity: qty,
+    kind: action.kind === "rush-order" ? "rush" : "normal",
+    placedDay: truth.time,
+    etaDay: truth.time + lead,
+    unitCost: unit,
+  };
+  return {
+    truth: {
+      ...truth,
+      cash: truth.cash - cost,
+      pendingOrders: [...truth.pendingOrders, order],
+      ordersToday: truth.ordersToday + 1,
+      rushCostAcc: truth.rushCostAcc + (action.kind === "rush-order" ? cost : 0),
+    },
+    updates: [{ id: order.id, status: "placed", quantity: qty }],
+    rejected: false,
+  };
+}
+
