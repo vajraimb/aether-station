@@ -8,6 +8,7 @@ import type {
   InventoryObservation,
   InventoryPrivateScenario,
   InventoryPublicConfig,
+  InventorySample,
   InventoryTruth,
   OrderUpdate,
 } from "./types";
@@ -21,9 +22,10 @@ export interface InventoryEvent {
 export class InventoryEnvironment implements Environment<InventoryObservation, InventoryAction> {
   truth: InventoryTruth | null = null;
   events: InventoryEvent[] = [];
+  log: InventorySample[] = [];
+  sc: InventoryPrivateScenario | null = null;
   private ch = new ObservationChannel();
   private rng: () => number = mulberry32(1);
-  private sc: InventoryPrivateScenario | null = null;
   private lastHealthy = true;
 
   constructor(readonly cfg: InventoryPublicConfig) {}
@@ -33,6 +35,7 @@ export class InventoryEnvironment implements Environment<InventoryObservation, I
     this.rng = mulberry32(this.sc.seed);
     this.truth = initialTruth(this.cfg, this.sc);
     this.events = [];
+    this.log = [];
     this.ch = new ObservationChannel();
     this.lastHealthy = true;
     this.ch.push(this.truth);
@@ -64,6 +67,25 @@ export class InventoryEnvironment implements Environment<InventoryObservation, I
     }
     this.ch.push(this.truth, updates);
     const observation = this.ch.sample(this.cfg, this.sc, this.rng);
+    this.log.push({
+      t: this.truth.time,
+      onHand: this.truth.onHand,
+      cash: this.truth.cash,
+      demandToday: this.truth.demandToday,
+      filledToday: this.truth.filledToday,
+      backlog: this.truth.backlog,
+      reportedOnHand: observation.reportedOnHand,
+      demandForecast: observation.demandForecast,
+      supplierAlert: observation.supplierAlert,
+      actionKind: action.kind,
+      actionQty: action.kind === "coast" ? 0 : action.quantity,
+      demandAcc: this.truth.demandAcc,
+      filledAcc: this.truth.filledAcc,
+      holdingCostAcc: this.truth.holdingCostAcc,
+      rushCostAcc: this.truth.rushCostAcc,
+      stockoutDays: this.truth.stockoutDays,
+      constraintViolations: this.truth.constraintViolations,
+    });
     const terminated = this.truth.time >= this.cfg.horizonDays || this.truth.cash < 0;
     return { observation, terminated, truncated: false };
   }

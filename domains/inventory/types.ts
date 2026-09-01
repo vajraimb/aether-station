@@ -86,3 +86,24 @@ export const OBSERVATION_KEYS = [
 ] as const;
 
 export const HIDDEN_TRUTH_KEYS = ["demandRate", "supplierHealthy", "pendingOrders", "backlog"] as const;
+
+export interface InventorySample {
+  t: number;
+  onHand: number;
+  cash: number;
+  demandToday: number;
+  filledToday: number;
+  backlog: number;
+  reportedOnHand: number;
+  demandForecast: number;
+  supplierAlert: boolean;
+  actionKind: string;
+  actionQty: number;
+  demandAcc: number;
+  filledAcc: number;
+  holdingCostAcc: number;
+  rushCostAcc: number;
+  stockoutDays: number;
+  constraintViolations: number;
+}
+
