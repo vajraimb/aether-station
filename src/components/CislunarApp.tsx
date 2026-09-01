@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { Link } from "@tanstack/react-router";
 import { Pause, Play, Repeat, RotateCcw, SkipForward } from "lucide-react";
 import { PHASE_LABEL, isLunarPhase, type Phase } from "../../domains/cislunar/constants";
@@ -82,6 +82,116 @@ const CAMERAS: { id: CameraMode; label: string }[] = [
   { id: "craft", label: "Craft" },
 ];
 
+function HudSheet({
+  summary,
+  children,
+}: {
+  summary: string;
+  children: React.ReactNode;
+}) {
+  const [open, setOpen] = useState(true);
+  const [drag, setDrag] = useState(0);
+  const [dragging, setDragging] = useState(false);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const handleRef = useRef<HTMLButtonElement>(null);
+  const draggingRef = useRef(false);
+  const dragRef = useRef(0);
+  const startY = useRef(0);
+  const startDrag = useRef(0);
+  const lastY = useRef(0);
+  const lastT = useRef(0);
+  const vel = useRef(0);
+  const moved = useRef(false);
+
+  const closedY = () => {
+    const panel = panelRef.current;
+    const handle = handleRef.current;
+    if (!panel || !handle) return 240;
+    return Math.max(0, panel.offsetHeight - handle.offsetHeight);
+  };
+
+  const onDown = (e: ReactPointerEvent<HTMLButtonElement>) => {
+    e.currentTarget.setPointerCapture(e.pointerId);
+    draggingRef.current = true;
+    setDragging(true);
+    moved.current = false;
+    startY.current = e.clientY;
+    startDrag.current = dragRef.current;
+    lastY.current = e.clientY;
+    lastT.current = performance.now();
+    vel.current = 0;
+  };
+
+  const onMove = (e: ReactPointerEvent<HTMLButtonElement>) => {
+    if (!draggingRef.current) return;
+    const dy = e.clientY - startY.current;
+    if (Math.abs(dy) > 8) moved.current = true;
+    const now = performance.now();
+    vel.current = (e.clientY - lastY.current) / Math.max(1, now - lastT.current);
+    lastY.current = e.clientY;
+    lastT.current = now;
+    const max = closedY();
+    const next = open
+      ? Math.min(max, Math.max(0, startDrag.current + dy))
+      : Math.min(0, Math.max(-max, startDrag.current + dy));
+    dragRef.current = next;
+    setDrag(next);
+  };
+
+  const onUp = () => {
+    if (!draggingRef.current) return;
+    draggingRef.current = false;
+    setDragging(false);
+    const threshold = 56;
+    const d = dragRef.current;
+    if (open) {
+      if (d > threshold || vel.current > 0.35) setOpen(false);
+    } else if (d < -threshold || vel.current < -0.35) {
+      setOpen(true);
+    }
+    dragRef.current = 0;
+    setDrag(0);
+  };
+
+  const y = open ? drag : closedY() + drag;
+
+  return (
+    <div className="pointer-events-none absolute inset-x-0 bottom-0 overflow-hidden p-3 sm:p-4">
+      <div
+        ref={panelRef}
+        className={
+          "pointer-events-auto mx-auto flex max-w-3xl flex-col rounded-xl bg-bg-elevated/90 shadow-[var(--shadow-border)] backdrop-blur-sm " +
+          (dragging ? "" : "transition-transform duration-[var(--motion-quick)] motion-reduce:transition-none")
+        }
+        style={{ transform: `translateY(${y}px)` }}
+      >
+        <button
+          ref={handleRef}
+          type="button"
+          aria-expanded={open}
+          aria-label={open ? "Hide mission panel" : "Show mission panel"}
+          onPointerDown={onDown}
+          onPointerMove={onMove}
+          onPointerUp={onUp}
+          onPointerCancel={onUp}
+          onClick={() => {
+            if (moved.current) return;
+            setOpen((v) => !v);
+            setDrag(0);
+          }}
+          className="flex min-h-11 w-full shrink-0 touch-none select-none flex-col items-center justify-center gap-1 px-3"
+        >
+          <span className="block h-1 w-10 rounded-full bg-fg-subtle" />
+          {!open && (
+            <span className="font-mono text-2xs uppercase tracking-[0.12em] text-fg-muted">{summary}</span>
+          )}
+        </button>
+        <div className={"flex flex-col gap-3 px-3 pb-3 " + (open ? "" : "pointer-events-none")}>{children}</div>
+      </div>
+    </div>
+  );
+}
+
 export function CislunarApp() {
   const mission = useMemo(() => buildCislunarMission(), []);
   const [briefing, setBriefing] = useState(true);
@@ -162,7 +272,7 @@ export function CislunarApp() {
         </nav>
       </header>
 
-      <section className="relative min-h-0 flex-1">
+      <section className="relative min-h-0 flex-1 overflow-hidden">
         <div className="absolute inset-0 touch-none">
           <CislunarCanvas mission={mission} sample={sample} mode={mode} />
         </div>
@@ -195,68 +305,66 @@ export function CislunarApp() {
         )}
 
         {!briefing && (
-          <div className="pointer-events-none absolute inset-x-0 bottom-0 p-3 sm:p-4">
-            <div className="pointer-events-auto mx-auto flex max-w-3xl flex-col gap-3 rounded-xl bg-bg-elevated/90 p-3 shadow-[var(--shadow-border)] backdrop-blur-sm">
-              <div className="h-1 overflow-hidden rounded-full bg-bg-subtle">
-                <div className="h-full bg-accent" style={{ width: `${Math.min(100, progress * 100)}%` }} />
-              </div>
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                <Chip label="Phase" value={PHASE_LABEL[phase]} tone="ok" />
-                <Chip label="Mission time" value={fmtTime(sample.t)} />
-                <Chip
-                  label={isLunarPhase(phase) ? "Moon altitude" : "Earth altitude"}
-                  value={
-                    (isLunarPhase(phase) ? sample.altMoon : sample.altEarth) > 2000
-                      ? `${((isLunarPhase(phase) ? sample.altMoon : sample.altEarth) / 1000).toFixed(0)} Mm`
-                      : `${(isLunarPhase(phase) ? sample.altMoon : sample.altEarth).toFixed(0)} km`
-                  }
-                />
-                <Chip
-                  label={phase === "revolution" ? "Moon orbit" : "Speed"}
-                  value={
-                    phase === "revolution" ? `${moonDeg.toFixed(0)}°` : `${sample.speed.toFixed(2)} km/s`
-                  }
-                  tone={phase === "revolution" ? "ok" : "muted"}
-                />
-              </div>
-              <div className="flex flex-wrap items-center gap-2">
-                <Btn onClick={() => setPlaying((p) => !p)} active={playing} title={playing ? "Pause" : "Play"}>
-                  {playing ? <Pause className="size-4" /> : <Play className="size-4" />}
-                </Btn>
-                <Btn
-                  onClick={() => {
-                    setT(0);
-                    setPlaying(false);
-                  }}
-                  title="Restart"
-                >
-                  <RotateCcw className="size-4" />
-                </Btn>
-                <Btn onClick={skipPhase} title="Next phase">
-                  <SkipForward className="size-4" />
-                </Btn>
-                <Btn onClick={() => setLoop((v) => !v)} active={loop} title="Loop">
-                  <Repeat className="size-4" />
-                </Btn>
-                <div className="mx-1 h-6 w-px bg-border" />
-                {WARPS.map((w) => (
-                  <Btn key={w.label} onClick={() => setWarp(w.value)} active={warp === w.value}>
-                    {w.label}
-                  </Btn>
-                ))}
-              </div>
-              <div className="flex flex-wrap items-center gap-2">
-                {CAMERAS.map((c) => (
-                  <Btn key={c.id} onClick={() => setMode(c.id)} active={mode === c.id}>
-                    {c.label}
-                  </Btn>
-                ))}
-                <span className="px-1 text-2xs uppercase tracking-[0.12em] text-fg-subtle">
-                  drag · scroll to zoom
-                </span>
-              </div>
+          <HudSheet summary={`${PHASE_LABEL[phase]} · ${fmtTime(sample.t)}`}>
+            <div className="h-1 overflow-hidden rounded-full bg-bg-subtle">
+              <div className="h-full bg-accent" style={{ width: `${Math.min(100, progress * 100)}%` }} />
             </div>
-          </div>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+              <Chip label="Phase" value={PHASE_LABEL[phase]} tone="ok" />
+              <Chip label="Mission time" value={fmtTime(sample.t)} />
+              <Chip
+                label={isLunarPhase(phase) ? "Moon altitude" : "Earth altitude"}
+                value={
+                  (isLunarPhase(phase) ? sample.altMoon : sample.altEarth) > 2000
+                    ? `${((isLunarPhase(phase) ? sample.altMoon : sample.altEarth) / 1000).toFixed(0)} Mm`
+                    : `${(isLunarPhase(phase) ? sample.altMoon : sample.altEarth).toFixed(0)} km`
+                }
+              />
+              <Chip
+                label={phase === "revolution" ? "Moon orbit" : "Speed"}
+                value={
+                  phase === "revolution" ? `${moonDeg.toFixed(0)}°` : `${sample.speed.toFixed(2)} km/s`
+                }
+                tone={phase === "revolution" ? "ok" : "muted"}
+              />
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <Btn onClick={() => setPlaying((p) => !p)} active={playing} title={playing ? "Pause" : "Play"}>
+                {playing ? <Pause className="size-4" /> : <Play className="size-4" />}
+              </Btn>
+              <Btn
+                onClick={() => {
+                  setT(0);
+                  setPlaying(false);
+                }}
+                title="Restart"
+              >
+                <RotateCcw className="size-4" />
+              </Btn>
+              <Btn onClick={skipPhase} title="Next phase">
+                <SkipForward className="size-4" />
+              </Btn>
+              <Btn onClick={() => setLoop((v) => !v)} active={loop} title="Loop">
+                <Repeat className="size-4" />
+              </Btn>
+              <div className="mx-1 h-6 w-px bg-border" />
+              {WARPS.map((w) => (
+                <Btn key={w.label} onClick={() => setWarp(w.value)} active={warp === w.value}>
+                  {w.label}
+                </Btn>
+              ))}
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              {CAMERAS.map((c) => (
+                <Btn key={c.id} onClick={() => setMode(c.id)} active={mode === c.id}>
+                  {c.label}
+                </Btn>
+              ))}
+              <span className="px-1 text-2xs uppercase tracking-[0.12em] text-fg-subtle">
+                drag · scroll to zoom
+              </span>
+            </div>
+          </HudSheet>
         )}
       </section>
     </main>
