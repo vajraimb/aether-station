@@ -114,6 +114,10 @@ export function completionEstimate(
 }
 
 export interface CostWeights {
+  /** Penalty for a plan whose terminal set does not hold across the window. */
+  dwell: number;
+  /** Penalty for arriving with no braking reserve left. */
+  braking: number;
   /** Per second of total mission nozzle on-time. */
   onTime: number;
   /** Per second of predicted completion epoch. */
@@ -128,6 +132,8 @@ export interface CostWeights {
 }
 
 export const DEFAULT_WEIGHTS: CostWeights = {
+  dwell: 300,
+  braking: 250,
   onTime: 60,
   completion: 3,
   box: 4000,
@@ -175,13 +181,21 @@ export function candidateCost(
   // by the drift the residual rate produces over `TAU_JITTER` seconds removes
   // that artefact and makes the pointing term monotone in how well the rate is
   // actually nulled, which is the joint terminal condition section 7 asks for.
-  const attEff = term.attitudeDeg + deg(term.omega) * TAU_JITTER;
+  const attEff = term.dwellAttitudeDeg + deg(term.dwellOmega) * TAU_JITTER;
+  // Persistent capture is the primary pointing measure: the worst value across
+  // the capture window, not the value at the final instant. A free-drift
+  // fly-by of the target cannot earn credit here, because sweeping past
+  // implies a rate large enough to leave the window.
   const ratios = [
     attEff / GATES.attitudeDeg,
-    term.omega / GATES.omega,
+    term.dwellOmega / GATES.omega,
     term.sloshRatio / GATES.sloshRatio,
     term.impactSpeed / GATES.impactSpeed,
   ];
+  // Demoting persistent capture to a graded secondary term was implemented and
+  // measured and is worse: see failure-analysis.json, `graded_dwell_worse`.
+  // Using min over t of the pointing error as a success proxy is forbidden and
+  // is used nowhere.
   // Outside the box the excess dominates; inside the box the section-7 level-3
   // objective still asks for the smallest terminal error, so keep a bounded
   // margin term that separates a grazing pass from a comfortable one.
@@ -194,6 +208,15 @@ export function candidateCost(
     }
   }
 
+  // Braking reserve: how much of the still-needed stopping burn the remaining
+  // fuel and remaining clock can actually cover. A candidate that arrives near
+  // the box with no reserve left is worse than one that arrives slightly wider
+  // but can still be corrected.
+  const fuelLeft = Math.max(0, r.fuel - GATES.fuelFloor);
+  const brakingDeficit =
+    comp.fuelNeeded > 1e-9 ? Math.max(0, 1 - fuelLeft / comp.fuelNeeded) : 0;
+  const dwellPenalty = term.dwellHeld ? 0 : 1;
+
   const onTimeMission = r.totalOnTime + comp.onTimeRemaining;
   const cost =
     weights.hard * term.hardViolations +
@@ -201,6 +224,8 @@ export function candidateCost(
     weights.onTime * onTimeMission +
     weights.completion * comp.completionT +
     weights.box * boxExcess +
+    weights.dwell * dwellPenalty +
+    weights.braking * brakingDeficit +
     weights.margin * boxMargin;
   return { cost, completion: comp, boxExcess, boxMargin, attEff, onTimeMission, term };
 }

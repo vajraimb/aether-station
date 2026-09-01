@@ -1,0 +1,554 @@
+{
+  "artefact": "objective-ablation",
+  "provenance": {
+    "branch": "control/challenge-v3-hybrid-robust",
+    "commit": "d4e98b3ad69a68d4c7a7c6a3efa9c065ce197a22",
+    "start_commit": "86ce40cb98acd32dd7c82fea2a7695e799a144a7",
+    "physics_baseline_sha": "bdfff5b4c62733d7156d2f9cdeeaa75661d6c9f4",
+    "immutable_file_sha256": {
+      "src/sim/math3d.ts": "6c131732fd5590930a58555fa16361bf2f7421eedeb47870c3f282754b9da158",
+      "src/sim/dynamics.ts": "f23b1ea3bbc170743df442105636866df848033522bd6ed6e92afca69b62ca11",
+      "src/sim/audit.ts": "96b445596c5175e94e29c2f877bcd7a7f255521a0936459f9f8780bf34e21549"
+    },
+    "immutable_diff_vs_start": "none",
+    "determinism": {
+      "fixed_seed": true,
+      "wall_clock_deadlines": false,
+      "note": "All optimizers use fixed iteration/expansion/population counts and a seeded RNG; no wall-clock cutoff is used anywhere in the planner (spec 13)."
+    }
+  },
+  "question": "Does redefining the capture objective - persistent capture, committed-prefix ranking, explicit time quantisation - move the truth-state Train-10 pass rate?",
+  "answer": {
+    "claim_type": "measured",
+    "text": "No. Four objective and generator configurations were run over the same ten Train seeds. The pass rate does not exceed 7/10 in any of them, and the identity of the failing seeds changes between configurations. The intended effect of the persistent-capture requirement is visible and real - it removes the free-drift fly-by that the first verdict identified as a ranking bug, and the passing seeds tighten from 0.04-0.99 degrees to 0.05-0.99 degrees with terminal rates falling to the 1e-4 range - but it does not convert a failing seed into a passing one."
+  },
+  "gate_requirement": {
+    "attitude_pass_rate": 0.9,
+    "rate_pass_rate": 0.9,
+    "fuel_pass_rate": 0.9,
+    "all_terminal_gates_pass_rate": 0.8
+  },
+  "configurations": [
+    {
+      "id": "c1_baseline_instantaneous_terminal",
+      "claim_type": "measured",
+      "description": "The stage-1 configuration reported in the first verdict. Pointing is scored at the mission end only, there is no persistent-capture requirement and no explicit time-slot enumeration.",
+      "raw_rows": "outputs/challenge-v3/raw/truth-config-1-baseline.jsonl",
+      "available": true,
+      "seeds": 10,
+      "attitude_pass_rate": 0.7,
+      "rate_pass_rate": 1,
+      "fuel_pass_rate": 1,
+      "all_gates_pass_rate": 0.7,
+      "attitude_deg": {
+        "best": 0.042438617420605375,
+        "median": 0.622898850317772,
+        "worst": 2.7439361964917572
+      },
+      "per_seed": [
+        {
+          "seed": 800000,
+          "passed": true,
+          "final_attitude_error_deg": 0.042438617420605375,
+          "final_angular_speed_rad_s": 0.000947663911574165,
+          "remaining_fuel_kg": 3.6686878213270426,
+          "final_slosh_energy_ratio": 0.00031613351426255183,
+          "replans": 20,
+          "rollouts": 6233,
+          "wall_clock_s": 180.887
+        },
+        {
+          "seed": 800017,
+          "passed": false,
+          "final_attitude_error_deg": 2.7439361964917572,
+          "final_angular_speed_rad_s": 0.0047275837999519316,
+          "remaining_fuel_kg": 3.8917355585530857,
+          "final_slosh_energy_ratio": 0.001582541018710738,
+          "replans": 65,
+          "rollouts": 23411,
+          "wall_clock_s": 518.758
+        },
+        {
+          "seed": 800034,
+          "passed": true,
+          "final_attitude_error_deg": 0.622898850317772,
+          "final_angular_speed_rad_s": 0.0007803634335044428,
+          "remaining_fuel_kg": 3.765550671088201,
+          "final_slosh_energy_ratio": 0.00006114179571408292,
+          "replans": 34,
+          "rollouts": 11591,
+          "wall_clock_s": 355.752
+        },
+        {
+          "seed": 800051,
+          "passed": false,
+          "final_attitude_error_deg": 1.0705463212973072,
+          "final_angular_speed_rad_s": 0.007275989764630892,
+          "remaining_fuel_kg": 3.438569140983037,
+          "final_slosh_energy_ratio": 0.0003617041173433139,
+          "replans": 44,
+          "rollouts": 14944,
+          "wall_clock_s": 432.706
+        },
+        {
+          "seed": 800068,
+          "passed": true,
+          "final_attitude_error_deg": 0.07062088598787865,
+          "final_angular_speed_rad_s": 0.0004874861147710599,
+          "remaining_fuel_kg": 3.734191647374768,
+          "final_slosh_energy_ratio": 0.0000321807233224356,
+          "replans": 16,
+          "rollouts": 5000,
+          "wall_clock_s": 205.242
+        },
+        {
+          "seed": 800085,
+          "passed": false,
+          "final_attitude_error_deg": 1.546497420943615,
+          "final_angular_speed_rad_s": 0.0050699744540966905,
+          "remaining_fuel_kg": 3.812260555241446,
+          "final_slosh_energy_ratio": 0.0035419417676244695,
+          "replans": 50,
+          "rollouts": 17923,
+          "wall_clock_s": 369.162
+        },
+        {
+          "seed": 800102,
+          "passed": true,
+          "final_attitude_error_deg": 0.5351970202981408,
+          "final_angular_speed_rad_s": 0.0004010951343185536,
+          "remaining_fuel_kg": 3.2790766042361392,
+          "final_slosh_energy_ratio": 0.000015266258849926945,
+          "replans": 39,
+          "rollouts": 12747,
+          "wall_clock_s": 301.007
+        },
+        {
+          "seed": 800119,
+          "passed": true,
+          "final_attitude_error_deg": 0.9940861006371909,
+          "final_angular_speed_rad_s": 0.004696543552887654,
+          "remaining_fuel_kg": 3.7569133141899442,
+          "final_slosh_energy_ratio": 0.000634726355830626,
+          "replans": 66,
+          "rollouts": 22774,
+          "wall_clock_s": 473.549
+        },
+        {
+          "seed": 800136,
+          "passed": true,
+          "final_attitude_error_deg": 0.5721851128888248,
+          "final_angular_speed_rad_s": 0.00025799909708988823,
+          "remaining_fuel_kg": 3.2675577722547167,
+          "final_slosh_energy_ratio": 0.0000016094273156778103,
+          "replans": 34,
+          "rollouts": 10746,
+          "wall_clock_s": 252.978
+        },
+        {
+          "seed": 800153,
+          "passed": true,
+          "final_attitude_error_deg": 0.09006088225990676,
+          "final_angular_speed_rad_s": 0.0005789206635382241,
+          "remaining_fuel_kg": 3.819818801765308,
+          "final_slosh_energy_ratio": 0.0005827374862589814,
+          "replans": 16,
+          "rollouts": 4650,
+          "wall_clock_s": 211.799
+        }
+      ]
+    },
+    {
+      "id": "c2_dwell_primary_plus_slot_search",
+      "claim_type": "measured",
+      "description": "Follow-up items A, B and C together: the primary pointing measure is the worst value over the 3 s capture window, candidates are ranked by persistent-capture probability ahead of the instantaneous gates, and arrival, braking-start, dwell-start, coast duration and pulse phase are enumerated explicitly on the commandable grid. This is the configuration retained in the repository: the same pass rate as the baseline but with a qualitatively different terminal state - the seeds that pass do so with an order of magnitude more margin.",
+      "raw_rows": "outputs/challenge-v3/raw/truth-config-2-dwell-slot.jsonl",
+      "available": true,
+      "seeds": 10,
+      "attitude_pass_rate": 0.7,
+      "rate_pass_rate": 1,
+      "fuel_pass_rate": 1,
+      "all_gates_pass_rate": 0.7,
+      "attitude_deg": {
+        "best": 0.04958589093789935,
+        "median": 0.5647874338020804,
+        "worst": 5.470356055508929
+      },
+      "per_seed": [
+        {
+          "seed": 800000,
+          "passed": true,
+          "final_attitude_error_deg": 0.07602361394535596,
+          "final_angular_speed_rad_s": 0.0003008702656381896,
+          "remaining_fuel_kg": 3.533495596769933,
+          "final_slosh_energy_ratio": 0.0001515865956243253,
+          "replans": 17,
+          "rollouts": 6015,
+          "wall_clock_s": 338.104
+        },
+        {
+          "seed": 800017,
+          "passed": false,
+          "final_attitude_error_deg": 5.470356055508929,
+          "final_angular_speed_rad_s": 0.004282043633188039,
+          "remaining_fuel_kg": 3.9786466985132014,
+          "final_slosh_energy_ratio": 0.0019072255188374726,
+          "replans": 54,
+          "rollouts": 20652,
+          "wall_clock_s": 468.602
+        },
+        {
+          "seed": 800034,
+          "passed": true,
+          "final_attitude_error_deg": 0.04958589093789935,
+          "final_angular_speed_rad_s": 0.00023546454976963342,
+          "remaining_fuel_kg": 3.759428802322022,
+          "final_slosh_energy_ratio": 0.000052797713651286425,
+          "replans": 22,
+          "rollouts": 8247,
+          "wall_clock_s": 405.518
+        },
+        {
+          "seed": 800051,
+          "passed": true,
+          "final_attitude_error_deg": 0.9853831458489728,
+          "final_angular_speed_rad_s": 0.0024856019394588064,
+          "remaining_fuel_kg": 3.474258989189013,
+          "final_slosh_energy_ratio": 0.0020582995089510315,
+          "replans": 44,
+          "rollouts": 16790,
+          "wall_clock_s": 532.875
+        },
+        {
+          "seed": 800068,
+          "passed": true,
+          "final_attitude_error_deg": 0.1788441642860145,
+          "final_angular_speed_rad_s": 0.000433237748049997,
+          "remaining_fuel_kg": 3.6061332148135605,
+          "final_slosh_energy_ratio": 0.0001021275451551344,
+          "replans": 18,
+          "rollouts": 6400,
+          "wall_clock_s": 315.674
+        },
+        {
+          "seed": 800085,
+          "passed": false,
+          "final_attitude_error_deg": 3.14084384363896,
+          "final_angular_speed_rad_s": 0.005169112658615887,
+          "remaining_fuel_kg": 3.724636436548505,
+          "final_slosh_energy_ratio": 0.0022943504194063748,
+          "replans": 44,
+          "rollouts": 17493,
+          "wall_clock_s": 532.833
+        },
+        {
+          "seed": 800102,
+          "passed": true,
+          "final_attitude_error_deg": 0.5647874338020804,
+          "final_angular_speed_rad_s": 0.00012882206507343994,
+          "remaining_fuel_kg": 3.282685828817635,
+          "final_slosh_energy_ratio": 0.000008022312812335248,
+          "replans": 44,
+          "rollouts": 15151,
+          "wall_clock_s": 448.929
+        },
+        {
+          "seed": 800119,
+          "passed": false,
+          "final_attitude_error_deg": 1.148575990672932,
+          "final_angular_speed_rad_s": 0.0004744075977102388,
+          "remaining_fuel_kg": 3.7626352321913714,
+          "final_slosh_energy_ratio": 0.00012897914436254128,
+          "replans": 37,
+          "rollouts": 13900,
+          "wall_clock_s": 449.599
+        },
+        {
+          "seed": 800136,
+          "passed": true,
+          "final_attitude_error_deg": 0.15869613221756898,
+          "final_angular_speed_rad_s": 0.00007485293778341365,
+          "remaining_fuel_kg": 3.3206172568375094,
+          "final_slosh_energy_ratio": 0.000029136098866698882,
+          "replans": 31,
+          "rollouts": 11513,
+          "wall_clock_s": 409.74
+        },
+        {
+          "seed": 800153,
+          "passed": true,
+          "final_attitude_error_deg": 0.07023517766058864,
+          "final_angular_speed_rad_s": 0.0009332823591494079,
+          "remaining_fuel_kg": 3.850713597530614,
+          "final_slosh_energy_ratio": 0.00045836790697120956,
+          "replans": 18,
+          "rollouts": 6756,
+          "wall_clock_s": 409.124
+        }
+      ]
+    },
+    {
+      "id": "c3_dwell_graded_secondary",
+      "claim_type": "measured",
+      "description": "Persistent capture demoted from the primary pointing measure to a graded secondary penalty, on the theory that requiring a 3 s dwell forbids legitimate late arrivals. Measured and rejected: the pass rate falls. Retained here as a negative result, not in the code.",
+      "raw_rows": "outputs/challenge-v3/raw/truth-config-3-graded-dwell.jsonl",
+      "available": true,
+      "seeds": 10,
+      "attitude_pass_rate": 0.5,
+      "rate_pass_rate": 1,
+      "fuel_pass_rate": 1,
+      "all_gates_pass_rate": 0.5,
+      "attitude_deg": {
+        "best": 0.08095737921927244,
+        "median": 1.0979046713282832,
+        "worst": 4.133748494086183
+      },
+      "per_seed": [
+        {
+          "seed": 800000,
+          "passed": true,
+          "final_attitude_error_deg": 0.08095737921927244,
+          "final_angular_speed_rad_s": 0.0006801559193774027,
+          "remaining_fuel_kg": 3.139941462124225,
+          "final_slosh_energy_ratio": 0.00041936587785149196,
+          "replans": 17,
+          "rollouts": 6280,
+          "wall_clock_s": 310.485
+        },
+        {
+          "seed": 800017,
+          "passed": false,
+          "final_attitude_error_deg": 2.67237385030358,
+          "final_angular_speed_rad_s": 0.004714600284008608,
+          "remaining_fuel_kg": 3.8475134724133424,
+          "final_slosh_energy_ratio": 0.001337062296914548,
+          "replans": 64,
+          "rollouts": 24379,
+          "wall_clock_s": 510.646
+        },
+        {
+          "seed": 800034,
+          "passed": true,
+          "final_attitude_error_deg": 0.8024741516360561,
+          "final_angular_speed_rad_s": 0.00046577519466720735,
+          "remaining_fuel_kg": 3.758408490860992,
+          "final_slosh_energy_ratio": 0.000670785941550784,
+          "replans": 36,
+          "rollouts": 13159,
+          "wall_clock_s": 374.721
+        },
+        {
+          "seed": 800051,
+          "passed": false,
+          "final_attitude_error_deg": 1.0979046713282832,
+          "final_angular_speed_rad_s": 0.002070049578837185,
+          "remaining_fuel_kg": 3.426504966941539,
+          "final_slosh_energy_ratio": 0.004121984349621839,
+          "replans": 47,
+          "rollouts": 17291,
+          "wall_clock_s": 572.302
+        },
+        {
+          "seed": 800068,
+          "passed": false,
+          "final_attitude_error_deg": 3.316716185216344,
+          "final_angular_speed_rad_s": 0.007978712162701771,
+          "remaining_fuel_kg": 3.8321384380138364,
+          "final_slosh_energy_ratio": 0.0001598434826051679,
+          "replans": 48,
+          "rollouts": 17838,
+          "wall_clock_s": 564.854
+        },
+        {
+          "seed": 800085,
+          "passed": false,
+          "final_attitude_error_deg": 1.7871738184312134,
+          "final_angular_speed_rad_s": 0.004552099510655354,
+          "remaining_fuel_kg": 3.820060198629969,
+          "final_slosh_energy_ratio": 0.001701467432824451,
+          "replans": 57,
+          "rollouts": 21159,
+          "wall_clock_s": 576.29
+        },
+        {
+          "seed": 800102,
+          "passed": true,
+          "final_attitude_error_deg": 0.5608510504516782,
+          "final_angular_speed_rad_s": 0.0004669166072598463,
+          "remaining_fuel_kg": 3.30073195172512,
+          "final_slosh_energy_ratio": 0.000005010628341119414,
+          "replans": 49,
+          "rollouts": 16913,
+          "wall_clock_s": 526.163
+        },
+        {
+          "seed": 800119,
+          "passed": false,
+          "final_attitude_error_deg": 4.133748494086183,
+          "final_angular_speed_rad_s": 0.0017645434797810935,
+          "remaining_fuel_kg": 4.003909441251551,
+          "final_slosh_energy_ratio": 0.0007901248830194226,
+          "replans": 63,
+          "rollouts": 22736,
+          "wall_clock_s": 551.001
+        },
+        {
+          "seed": 800136,
+          "passed": true,
+          "final_attitude_error_deg": 0.6286726537371344,
+          "final_angular_speed_rad_s": 0.00025368932199529786,
+          "remaining_fuel_kg": 3.225510633528715,
+          "final_slosh_energy_ratio": 0.00001893946851947635,
+          "replans": 30,
+          "rollouts": 10609,
+          "wall_clock_s": 387.626
+        },
+        {
+          "seed": 800153,
+          "passed": true,
+          "final_attitude_error_deg": 0.19583822044394428,
+          "final_angular_speed_rad_s": 0.00017722105219811053,
+          "remaining_fuel_kg": 3.7920134855765326,
+          "final_slosh_energy_ratio": 0.0005128526192522138,
+          "replans": 16,
+          "rollouts": 6039,
+          "wall_clock_s": 409.525
+        }
+      ]
+    },
+    {
+      "id": "c4_exact_eigen_axis_slew_sizing",
+      "claim_type": "measured",
+      "description": "Manoeuvre sizing switched from the small-angle 2 * qe_vec attitude-error vector to the exact eigen-axis rotation vector, plus a reserve-aware polish frontier and a narrower pending-queue rule that flags only a pulse still firing at the mission end. Each change is individually better motivated than what it replaced - the small-angle form understates a 145 degree error by 25 percent, and the wide pending-queue rule made a pure coast win by default - and the single-epoch probes confirmed the intended effect, yet the end-to-end pass rate falls. The interaction is not understood and the configuration is not retained. This is recorded as an unexplained regression, not as evidence that the small-angle form is correct.",
+      "raw_rows": "outputs/challenge-v3/raw/truth-config-4-exact-rotation.jsonl",
+      "available": true,
+      "seeds": 10,
+      "attitude_pass_rate": 0.5,
+      "rate_pass_rate": 1,
+      "fuel_pass_rate": 1,
+      "all_gates_pass_rate": 0.5,
+      "attitude_deg": {
+        "best": 0.028804833692367023,
+        "median": 1.386213436645228,
+        "worst": 7.739112139928238
+      },
+      "per_seed": [
+        {
+          "seed": 800000,
+          "passed": true,
+          "final_attitude_error_deg": 0.6876522959383974,
+          "final_angular_speed_rad_s": 0.0013952984550648251,
+          "remaining_fuel_kg": 3.7107667079180464,
+          "final_slosh_energy_ratio": 0.0007395833488236523,
+          "replans": 19,
+          "rollouts": 8240,
+          "wall_clock_s": 566.821
+        },
+        {
+          "seed": 800017,
+          "passed": false,
+          "final_attitude_error_deg": 7.739112139928238,
+          "final_angular_speed_rad_s": 0.0038911303063509854,
+          "remaining_fuel_kg": 3.959660682864103,
+          "final_slosh_energy_ratio": 0.00029398292346869055,
+          "replans": 52,
+          "rollouts": 20685,
+          "wall_clock_s": 650.395
+        },
+        {
+          "seed": 800034,
+          "passed": true,
+          "final_attitude_error_deg": 0.057689704276201584,
+          "final_angular_speed_rad_s": 0.00043185187302458917,
+          "remaining_fuel_kg": 3.7533069335558427,
+          "final_slosh_energy_ratio": 0.00009730876498207974,
+          "replans": 18,
+          "rollouts": 9743,
+          "wall_clock_s": 544.916
+        },
+        {
+          "seed": 800051,
+          "passed": false,
+          "final_attitude_error_deg": 1.386213436645228,
+          "final_angular_speed_rad_s": 0.0029968215595262237,
+          "remaining_fuel_kg": 3.536087881151688,
+          "final_slosh_energy_ratio": 0.003348281869102026,
+          "replans": 49,
+          "rollouts": 19450,
+          "wall_clock_s": 824.742
+        },
+        {
+          "seed": 800068,
+          "passed": false,
+          "final_attitude_error_deg": 2.457279423268444,
+          "final_angular_speed_rad_s": 0.0067582830356080386,
+          "remaining_fuel_kg": 3.973181816534086,
+          "final_slosh_energy_ratio": 0.0018285747924053986,
+          "replans": 50,
+          "rollouts": 19737,
+          "wall_clock_s": 718.965
+        },
+        {
+          "seed": 800085,
+          "passed": false,
+          "final_attitude_error_deg": 1.6999296700235735,
+          "final_angular_speed_rad_s": 0.004877204333408102,
+          "remaining_fuel_kg": 3.8240818897521764,
+          "final_slosh_energy_ratio": 0.0024999740770062307,
+          "replans": 45,
+          "rollouts": 19611,
+          "wall_clock_s": 897.181
+        },
+        {
+          "seed": 800102,
+          "passed": false,
+          "final_attitude_error_deg": 1.4462705899943673,
+          "final_angular_speed_rad_s": 0.0008738998326013685,
+          "remaining_fuel_kg": 3.4871709590132824,
+          "final_slosh_energy_ratio": 0.0001830531157613315,
+          "replans": 20,
+          "rollouts": 8475,
+          "wall_clock_s": 522.578
+        },
+        {
+          "seed": 800119,
+          "passed": true,
+          "final_attitude_error_deg": 0.1282483899759544,
+          "final_angular_speed_rad_s": 0.0010560314032966255,
+          "remaining_fuel_kg": 3.6443822601618763,
+          "final_slosh_energy_ratio": 0.0009669222311566232,
+          "replans": 17,
+          "rollouts": 6903,
+          "wall_clock_s": 505.005
+        },
+        {
+          "seed": 800136,
+          "passed": true,
+          "final_attitude_error_deg": 0.8023775486839795,
+          "final_angular_speed_rad_s": 0.00019507423378033317,
+          "remaining_fuel_kg": 3.2185027770744443,
+          "final_slosh_energy_ratio": 0.000007862981100132016,
+          "replans": 49,
+          "rollouts": 23323,
+          "wall_clock_s": 1035.621
+        },
+        {
+          "seed": 800153,
+          "passed": true,
+          "final_attitude_error_deg": 0.028804833692367023,
+          "final_angular_speed_rad_s": 0.00016209491147445664,
+          "remaining_fuel_kg": 3.9094137094846957,
+          "final_slosh_energy_ratio": 0.0000503625298281928,
+          "replans": 20,
+          "rollouts": 10723,
+          "wall_clock_s": 636.163
+        }
+      ]
+    }
+  ],
+  "retained_configuration": "c2_dwell_primary_plus_slot_search",
+  "leave_one_seed_out_selector": {
+    "claim_type": "search_unreached",
+    "text": "Follow-up item E was to build a leave-one-seed-out selector if two configurations had to be retained. It was not built, because no configuration reaches the gate: a selector that chooses between configurations whose individual pass rates are 7/10, 7/10, 5/10 and below cannot produce a 9/10 rate, and choosing per seed from measured outcomes on the same ten seeds is the posterior oracle the reviewer already ruled out. No selector result is claimed."
+  }
+}

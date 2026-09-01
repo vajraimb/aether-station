@@ -1,7 +1,7 @@
 {
   "artefact": "failure-analysis",
   "branch": "control/challenge-v3-hybrid-robust",
-  "commit": "36ca763dbef4245aec8919ca6f7d84ceac89c5ac",
+  "commit": "d4e98b3ad69a68d4c7a7c6a3efa9c065ce197a22",
   "start_commit": "86ce40cb98acd32dd7c82fea2a7695e799a144a7",
   "physics_baseline_sha": "bdfff5b4c62733d7156d2f9cdeeaa75661d6c9f4",
   "immutable_file_sha256": {
@@ -33,36 +33,36 @@
   "failing_seeds": [
     {
       "seed": 800017,
-      "attitude_deg": 2.7439361964917572,
-      "angular_speed_rad_s": 0.0047275837999519316,
-      "remaining_fuel_kg": 3.8917355585530857,
-      "slosh_ratio": 0.001582541018710738,
+      "attitude_deg": 5.470356055508929,
+      "angular_speed_rad_s": 0.004282043633188039,
+      "remaining_fuel_kg": 3.9786466985132014,
+      "slosh_ratio": 0.0019072255188374726,
       "fault_thruster": 3,
       "fault_time_s": 79.91050987737253,
       "binding_gate": "attitude",
-      "margin_deg": 1.7439361964917572
-    },
-    {
-      "seed": 800051,
-      "attitude_deg": 1.0705463212973072,
-      "angular_speed_rad_s": 0.007275989764630892,
-      "remaining_fuel_kg": 3.438569140983037,
-      "slosh_ratio": 0.0003617041173433139,
-      "fault_thruster": 3,
-      "fault_time_s": 57.23702328745276,
-      "binding_gate": "attitude",
-      "margin_deg": 0.0705463212973072
+      "margin_deg": 4.470356055508929
     },
     {
       "seed": 800085,
-      "attitude_deg": 1.546497420943615,
-      "angular_speed_rad_s": 0.0050699744540966905,
-      "remaining_fuel_kg": 3.812260555241446,
-      "slosh_ratio": 0.0035419417676244695,
+      "attitude_deg": 3.14084384363896,
+      "angular_speed_rad_s": 0.005169112658615887,
+      "remaining_fuel_kg": 3.724636436548505,
+      "slosh_ratio": 0.0022943504194063748,
       "fault_thruster": 3,
       "fault_time_s": 87.52405885607004,
       "binding_gate": "attitude",
-      "margin_deg": 0.5464974209436151
+      "margin_deg": 2.14084384363896
+    },
+    {
+      "seed": 800119,
+      "attitude_deg": 1.148575990672932,
+      "angular_speed_rad_s": 0.0004744075977102388,
+      "remaining_fuel_kg": 3.7626352321913714,
+      "slosh_ratio": 0.00012897914436254128,
+      "fault_thruster": 5,
+      "fault_time_s": 56.59081413410604,
+      "binding_gate": "attitude",
+      "margin_deg": 0.14857599067293203
     }
   ],
   "diagnosis": [
@@ -107,6 +107,36 @@
       "finding": "Two planner configurations were each measured on the full Train-10 split. The richer rest-to-rest arrival grid without the shooting-polish stage passed 8 of 10 attitude (failing 800017 and 800119); the reduced grid with the polish stage passed 7 of 10 (failing 800017, 800051 and 800085). The union of seeds passed by at least one configuration is 9 of 10, and only 800017 fails under both. This is evidence that the required sequences are close to reachable and that the shortfall is a search and selection problem, not an action-space limit. It is not evidence that any single deterministic configuration reaches 90%."
     },
     {
+      "id": "graded_dwell_worse",
+      "claim_type": "measured",
+      "finding": "Follow-up item A defines persistent capture: the terminal set must hold for the whole window [T-3, T]. Two ways of enforcing it were run over the full Train-10 split. Making the worst value across the window the primary pointing measure keeps the pass rate at 7 of 10 and sharply tightens the seeds that do pass - terminal rates fall into the 1e-4 range and the passing margin grows by an order of magnitude. Demoting it to a graded secondary penalty, on the theory that a 3 s dwell forbids legitimate late arrivals, drops the pass rate to 5 of 10. The primary form is retained; the graded form is a measured negative result. See objective-ablation.json."
+    },
+    {
+      "id": "search_converged_at_8x",
+      "claim_type": "measured",
+      "finding": "Follow-up item D. Four single-epoch budget ladders were run at 1x, 2x, 4x and 8x search budget, scaling node expansions, CEM population and generations, refinement width, time-slot seeds and polish seeds, with no wall-clock stopping rule anywhere. In three of the four ladders the best sequence is bit-identical at 1x and 8x after roughly twenty times as many full-fidelity roll-outs; in the fourth the pointing error moves by 0.07 deg and not monotonically. The truth-state search is converged at the budget already in use, so the three failing seeds are not failing for want of search budget. See search-convergence.json."
+    },
+    {
+      "id": "coast_wins_by_default",
+      "claim_type": "measured",
+      "finding": "The reviewer identified free-drift fly-by ranking as a bug. It has a second, worse form that the persistent-capture requirement did not remove. On seed 800017 at t = 120 s the winning plan across every budget rung was the empty sequence - a pure coast - whose free drift passes 2.07 deg from the target, and which won because every manoeuvre the generator could construct from that state landed further out. It was identified by hashing the winning sequence: the hash was the SHA-256 of an empty action list. Two contributing causes were then found and are recorded below. Both were corrected, both behaved as intended on the single-epoch probes, and the end-to-end pass rate still fell, so neither correction is retained."
+    },
+    {
+      "id": "pending_queue_over_strict",
+      "claim_type": "measured",
+      "finding": "Follow-up item A also requires that the pending command queue contain nothing that destroys stability. Implemented literally - any command whose burn extends past t = 180 s counts as a hard violation - this rejects nearly every genuine braking manoeuvre, because a capture is timed to finish at the horizon and the 120 ms command delay pushes its last pulse past it. That is a mechanism by which a pure coast wins. Narrowing the rule to a pulse still *firing* at the mission end, which is the case that actually leaves the rate unsettled, is better motivated, but the configuration containing it scored 5 of 10 and is not retained."
+    },
+    {
+      "id": "small_angle_slew_sizing",
+      "claim_type": "measured",
+      "finding": "Every capture manoeuvre is sized from the attitude-error vector 2 * qe_vec, whose magnitude is 2 * sin(theta/2) rather than theta. That understates a 72 deg error by 7 percent and a 145 deg error by 25 percent, and replanning epochs on the failing seeds sit at 43-146 deg, so the generator systematically asks for too low a slew rate and undershoots. Replacing it with the exact eigen-axis rotation vector did change the outcome - on seed 800085 at t = 120 s the best plan improved from 3.103 to 1.662 deg, and on 800017 the winner stopped being the empty sequence - but the end-to-end Train-10 pass rate fell from 7 of 10 to 5 of 10. The interaction with the rest of the cost, which was tuned around the undershoot, is not understood. Recorded as an unexplained regression, not as evidence that the small-angle form is correct."
+    },
+    {
+      "id": "candidate_expressiveness_not_budget",
+      "claim_type": "measured",
+      "finding": "Three further structural interventions were implemented and measured at the probe epochs: a quantum-exact coast that reads the rate actually delivered by the quantised burn and then picks the coast length so that rate sweeps exactly the residual angle, removing the 40 ms rounding error from the pointing error; an appended exactly-quantised rotate-and-stop corrector; and a reserve-aware polish frontier that also polishes the candidates leaving the most horizon unspent, since ranking polish seeds by unpolished cost starves exactly the candidates polishing exists to rescue. Each returned a bit-identical best sequence. The appended corrector is infeasible by construction at the point it is applied: nulling a 1 deg residual with the minimum 40 ms pulse needs about 100 s of lever arm, and the candidate schedule has already consumed the horizon. The binding limitation is where the correction is inserted and what the candidate family can express, not the amount of search applied to it."
+    },
+    {
       "id": "persistent_hard_seed",
       "claim_type": "measured",
       "finding": "Seed 800017 fails under every configuration measured, best 2.43 deg. A reachability probe from its own t = 165 s truth state (attitude 12.479 deg, omega 2.789e-2 rad/s, fuel 3.990 kg, live nozzles 0,1,2,4,5) found a best achievable terminal attitude of 2.908 deg, so at that point the mission is already lost. The error is therefore committed upstream: between t = 100 s and t = 146 s the planner ranked an accidental free-drift fly-by of the target (predicted 1.00 deg, predicted rate 0.0211 rad/s) above a real capture, and only committed to braking too late."
@@ -117,10 +147,22 @@
     "statement": "The action space specified (coast, all legal single nozzles, all legal nozzle pairs, durations 40/80/120/160/240/320 ms) is NOT shown to be infeasible for the terminal gates. The evidence points the other way: 9 of 10 Train-10 seeds were passed by some measured configuration within this action space, and the torque matrix retains rank 3 with condition number about 2.4 after a single failure. What has not been achieved is a single fixed, deterministic search configuration that reaches the required 90%.",
     "explicitly_not_claimed": "physically infeasible - the specification forbids labelling a search shortfall as infeasibility, and no infeasibility certificate was computed"
   },
+  "completed_actions": [
+    "Persistent capture is defined and measured in the plant: the pointing and rate gates are evaluated over the whole window [T-3, T], and the worst value in that window - not the value at the final instant - is the primary pointing measure. A free-drift fly-by cannot earn credit, because sweeping past implies a rate large enough to leave the window.",
+    "Candidate ranking follows the committed-prefix order: hard-violation probability, then worst-case fuel feasibility, then persistent-capture probability, then instantaneous terminal gates, then CVaR, mean and pulse count. Braking reserve enters the scalar cost as an explicit deficit term. The instantaneous minimum of the pointing error over time is used nowhere as a success proxy.",
+    "Arrival slot, braking-start slot, dwell-start slot, coast duration and pulse phase are enumerated explicitly on the commandable grid as a dedicated deterministic search stage. Note the grid is not a single quantum: segment start times live on the 100 ms controller tick and pulse widths on the 40 ms actuator quantum, so a pure 40 ms arrival grid is not representable and arrival is searched at the achievable resolution of one tick.",
+    "The convergence curve was measured at 1x, 2x, 4x and 8x budget with no wall-clock stopping rule, and reported in search-convergence.json."
+  ],
+  "formally_recorded_limitation": {
+    "claim_type": "measured",
+    "title": "Truth-state L2 search limitation",
+    "statement": "Under the reviewer's stop rule - if the gate is still below 9 of 10 after an 8x budget and the dwell and committed-prefix fixes, stop and record the limitation formally - the limitation is recorded here. Four objective and generator configurations were measured over the same ten Train seeds and none exceeds 7 of 10; the identity of the failing seeds changes between configurations, so the shortfall is not a property of particular seeds either. Budget is not the cause: at three of four probe epochs an 8x budget returns a bit-identical best sequence after twenty times the roll-outs. What the round did establish is that the free-drift fly-by ranking the reviewer identified is real and has a second form in which a pure coast wins outright, and that the residual is set by where a correction can be inserted and what the candidate family can express.",
+    "not_claimed": "No infeasibility of the action space, the actuator or the mission is claimed. Levels 3 and 4, the hidden split, and every observation-only stage remain not attempted."
+  },
   "next_actions": [
-    "Replace the greedy per-epoch selection with an explicit commit-time decision: rank candidates by terminal-capture probability of the committed prefix alone, and forbid crediting free-drift fly-by attitudes that the plan does not actively brake into.",
-    "Raise branch-and-bound node expansions and CEM population until the per-epoch winner stops changing, and report the convergence curve rather than a fixed budget chosen by wall-clock affordability.",
-    "Add arrival-time refinement on the terminal capture at the 40 ms quantum, i.e. search the arrival tick explicitly instead of taking whichever rest-to-rest arrival the generator proposes.",
+    "Reserve terminal lever arm as a hard planning constraint rather than a preference: require the committed prefix to finish with enough horizon left that a residual of one degree can be nulled by an integer number of minimum pulses, which at the measured rate quantum is on the order of tens of seconds.",
+    "Re-examine the exact eigen-axis slew sizing together with a re-tuned cost. The correction is right on its own terms and improved the probe epochs, but regressed end-to-end, which indicates the cost weights absorbed the old undershoot.",
+    "Consider actuator codesign as the reviewer suggested: at a 40 ms minimum pulse the smallest commandable rate change is about 3.2e-4 rad/s, so nulling a one-degree residual with a single quantum needs roughly 100 s of lever arm. This is the quantitative statement of the terminal-authority problem.",
     "Only after the truth-state gate passes, resume the estimation, active identification and observation-only stages."
   ],
   "configuration": {
@@ -151,10 +193,14 @@
       ],
       "ensembleTopK": 6,
       "autoComplete": false,
+      "slotRounds": 2,
+      "slotSeeds": 2,
       "polishRounds": 2,
       "polishSeeds": 3
     },
     "cost_weights": {
+      "dwell": 300,
+      "braking": 250,
       "onTime": 60,
       "completion": 3,
       "box": 4000,

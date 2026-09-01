@@ -48,6 +48,13 @@ export interface PlantOptions {
   coastDt?: number;
   /** Stop at this absolute mission time. Defaults to cfg.duration. */
   until?: number;
+  /**
+   * Length of the persistent-capture window that ends at `until`, seconds.
+   * The terminal set must hold across the whole window, not only at the final
+   * instant, so that a free-drift fly-by of the target cannot be mistaken for
+   * a capture. 0 disables the measurement.
+   */
+  dwellWindowS?: number;
   /** Slider law. Defaults to the audited `sliderForceCommand`. */
   sliderForce?: (s: number, sd: number, cfg: PublicConfig) => number;
   /**
@@ -72,6 +79,19 @@ export interface RolloutResult {
   attitudeErrorDeg: number;
   omega: number;
   omegaVec: Vec3;
+  /** Worst attitude error over the persistent-capture window [until-w, until]. */
+  dwellAttitudeMaxDeg: number;
+  /** Worst rate over the persistent-capture window. */
+  dwellOmegaMax: number;
+  /** Nozzle-seconds burned inside the persistent-capture window. */
+  dwellOnTime: number;
+  /** Samples taken inside the window; 0 means the window was not measured. */
+  dwellSamples: number;
+  /**
+   * True if a submitted command can still be burning at or after `until`, i.e.
+   * the pending queue is not quiescent when the mission ends.
+   */
+  pendingAtEnd: boolean;
   fuel: number;
   sloshEnergy: number;
   initialSloshEnergy: number;
@@ -196,6 +216,12 @@ export function rollout(
   /** Latest mission time at which a queued pulse can still be burning. */
   let lastPulseOff = st.t;
   let atScheduleEnd: SimState | null = schedule.length === 0 ? cloneState(st) : null;
+  const dwellWindow = opts.dwellWindowS ?? 0;
+  const dwellStart = until - dwellWindow;
+  let dwellAttMax = 0;
+  let dwellWMax = 0;
+  let dwellOn = 0;
+  let dwellSamples = 0;
 
   while (st.t < until - 1e-12) {
     // Coarse step only once the schedule is exhausted and nothing is still
@@ -267,6 +293,13 @@ export function rollout(
     }
     const wm = vnorm(st.w);
     if (wm > peakOmega) peakOmega = wm;
+    if (dwellWindow > 0 && st.t >= dwellStart - 1e-9) {
+      const a = deg(attitudeErrorAngle(st.q, cfg.qTarget));
+      if (a > dwellAttMax) dwellAttMax = a;
+      if (wm > dwellWMax) dwellWMax = wm;
+      dwellSamples += 1;
+      dwellOn += snap.nActive * dt;
+    }
     if (!Number.isFinite(wm) || !Number.isFinite(st.q[0]) || !Number.isFinite(st.fuel)) {
       numericAnomaly = true;
       break;
@@ -279,6 +312,11 @@ export function rollout(
     atScheduleEnd: atScheduleEnd ?? cloneState(st),
     tEnd: st.t,
     attitudeErrorDeg: deg(attitudeErrorAngle(st.q, cfg.qTarget)),
+    dwellAttitudeMaxDeg: dwellSamples > 0 ? dwellAttMax : deg(attitudeErrorAngle(st.q, cfg.qTarget)),
+    dwellOmegaMax: dwellSamples > 0 ? dwellWMax : vnorm(st.w),
+    dwellOnTime: dwellOn,
+    dwellSamples,
+    pendingAtEnd: lastPulseOff > until + 1e-9,
     omega: vnorm(st.w),
     omegaVec: [st.w[0], st.w[1], st.w[2]],
     fuel: st.fuel,

@@ -31,7 +31,7 @@ import {
   type Quat,
   type Vec3,
 } from "../math3d";
-import { DURATION_GRID_S, type Action, type Segment } from "./action-space";
+import { DURATION_GRID_S, segmentTicks, type Action, type Segment } from "./action-space";
 import type { SurrogateModel } from "./surrogate";
 
 /** 40 ms quantum expressed in duration-grid units. */
@@ -55,6 +55,9 @@ export interface Allocation {
  * back to the least-squares basis with the smallest residual when `dw` is not
  * reachable (e.g. after a failure the sign structure can block a direction).
  */
+/** The 40 ms actuator quantum, seconds. */
+const MIN_PULSE_S = 0.04;
+
 export function allocateDeltaOmega(
   model: SurrogateModel,
   dw: Vec3,
@@ -375,6 +378,82 @@ export function generateProposals(
     for (const d of DURATION_GRID_S) {
       push(`primitive:${id}@${d}`, [{ action: [id], durationS: d }]);
     }
+  }
+  return out;
+}
+
+/**
+ * Explicit search over the commandable time quantisation (follow-up item C).
+ *
+ * The commandable grid is not a single number: pulse *start* times live on the
+ * 100 ms controller tick, pulse *widths* live on the 40 ms quantum, and the
+ * 120 ms command delay shifts every burn by a fixed amount. Arrival time,
+ * braking start, dwell start and coast duration are therefore all controlled
+ * by two integers - how many idle ticks precede the terminal burn group, and
+ * how many 40 ms quanta wide each of its pulses is - and this function
+ * enumerates both explicitly instead of accepting whichever arrival a
+ * generator happened to propose.
+ *
+ * The enumeration is fixed and ordered, so it is deterministic.
+ */
+export function slotVariants(
+  seq: readonly Segment[],
+  ctrlDt: number,
+  tickShifts: readonly number[] = [-8, -6, -4, -3, -2, -1, 1, 2, 3, 4, 6, 8],
+  quantaShifts: readonly number[] = [-2, -1, 1, 2],
+): Array<{ label: string; seq: Segment[] }> {
+  const out: Array<{ label: string; seq: Segment[] }> = [];
+  if (seq.length === 0) return out;
+  // Locate the terminal burn group: the last maximal run of firing segments.
+  let end = seq.length - 1;
+  while (end >= 0 && seq[end]!.action.length === 0) end -= 1;
+  if (end < 0) return out;
+  let begin = end;
+  while (begin > 0 && seq[begin - 1]!.action.length > 0) begin -= 1;
+
+  const head = seq.slice(0, begin);
+  const group = seq.slice(begin, end + 1);
+  const tail = seq.slice(end + 1);
+  // Idle ticks immediately before the terminal group, which is what sets the
+  // arrival slot and, with it, the dwell start.
+  let leadIdle = 0;
+  for (let i = head.length - 1; i >= 0 && head[i]!.action.length === 0; i--) {
+    leadIdle += segmentTicks(head[i]!.durationS, ctrlDt);
+  }
+
+  // Arrival / braking-start / coast-duration slots: move the terminal group by
+  // whole controller ticks by re-timing the idle stretch in front of it.
+  for (const k of tickShifts) {
+    const ticks = leadIdle + k;
+    if (ticks < 0) continue;
+    let cut = head.length;
+    let removed = 0;
+    while (cut > 0 && head[cut - 1]!.action.length === 0) {
+      removed += segmentTicks(head[cut - 1]!.durationS, ctrlDt);
+      cut -= 1;
+    }
+    void removed;
+    const rebuilt: Segment[] = [...head.slice(0, cut)];
+    if (ticks > 0) rebuilt.push(...coastSegments(ticks * ctrlDt, ctrlDt));
+    out.push({
+      label: `slot:tick${k >= 0 ? "+" : ""}${k}`,
+      seq: [...rebuilt, ...group, ...tail],
+    });
+  }
+
+  // Pulse phase / width: widen or narrow every pulse of the terminal group by
+  // whole 40 ms quanta. This is the only sub-tick authority the actuator has.
+  for (const q of quantaShifts) {
+    const scaled: Segment[] = group.map((s) => {
+      if (s.action.length === 0) return s;
+      const quanta = Math.round(s.durationS / MIN_PULSE_S) + q;
+      if (quanta < 1) return { action: s.action, durationS: MIN_PULSE_S };
+      return { action: s.action, durationS: quanta * MIN_PULSE_S };
+    });
+    out.push({
+      label: `slot:quanta${q >= 0 ? "+" : ""}${q}`,
+      seq: [...head, ...scaled, ...tail],
+    });
   }
   return out;
 }

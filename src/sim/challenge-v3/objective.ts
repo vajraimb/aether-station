@@ -37,6 +37,14 @@ export interface TerminalEval {
   gateExcess: number;
   attitudeDeg: number;
   omega: number;
+  /** Worst attitude error across the persistent-capture window. */
+  dwellAttitudeDeg: number;
+  /** Worst rate across the persistent-capture window. */
+  dwellOmega: number;
+  /** True if the joint terminal set held across the whole capture window. */
+  dwellHeld: boolean;
+  /** True if a command can still be burning when the mission ends. */
+  pendingAtEnd: boolean;
   sloshRatio: number;
   impactSpeed: number;
   fuel: number;
@@ -51,10 +59,16 @@ export function evaluateTerminal(r: RolloutResult, pulses: number): TerminalEval
   if (r.maxConstraintViolation > 1e-9) hard += 1;
   if (r.numericAnomaly) hard += 1;
   if (r.maxQuatNormError > GATES.quatNormErr) hard += 1;
+  // A command still in flight at the mission end means the terminal state was
+  // never actually settled; treat it as a hard violation of the capture.
+  if (r.pendingAtEnd) hard += 1;
 
+  // Persistent capture: the attitude and rate ratios are taken over the whole
+  // capture window rather than at the final instant, so a free-drift fly-by of
+  // the target cannot be scored as a capture (spec follow-up item A).
   const ratios = [
-    r.attitudeErrorDeg / GATES.attitudeDeg,
-    r.omega / GATES.omega,
+    r.dwellAttitudeMaxDeg / GATES.attitudeDeg,
+    r.dwellOmegaMax / GATES.omega,
     r.sloshRatio / GATES.sloshRatio,
     r.maxImpactSpeed / GATES.impactSpeed,
   ];
@@ -73,6 +87,14 @@ export function evaluateTerminal(r: RolloutResult, pulses: number): TerminalEval
     gateExcess: excess,
     attitudeDeg: r.attitudeErrorDeg,
     omega: r.omega,
+    dwellAttitudeDeg: r.dwellAttitudeMaxDeg,
+    dwellOmega: r.dwellOmegaMax,
+    dwellHeld:
+      r.dwellSamples > 0 &&
+      r.dwellAttitudeMaxDeg < GATES.attitudeDeg &&
+      r.dwellOmegaMax < GATES.omega &&
+      !r.pendingAtEnd,
+    pendingAtEnd: r.pendingAtEnd,
     sloshRatio: r.sloshRatio,
     impactSpeed: r.maxImpactSpeed,
     fuel: r.fuel,

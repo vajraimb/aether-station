@@ -1,7 +1,7 @@
 {
   "artefact": "level-baseline",
   "branch": "control/challenge-v3-hybrid-robust",
-  "commit": "36ca763dbef4245aec8919ca6f7d84ceac89c5ac",
+  "commit": "d4e98b3ad69a68d4c7a7c6a3efa9c065ce197a22",
   "start_commit": "86ce40cb98acd32dd7c82fea2a7695e799a144a7",
   "physics_baseline_sha": "bdfff5b4c62733d7156d2f9cdeeaa75661d6c9f4",
   "immutable_file_sha256": {

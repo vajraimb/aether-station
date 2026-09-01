@@ -31,6 +31,7 @@ import {
   generateProposals,
   restToRestProposals,
   scheduleAllocation,
+  slotVariants,
 } from "./proposals";
 import { branchAndBound, cem, type ExpansionSet, type SeqScore } from "./optimizers";
 
@@ -57,6 +58,10 @@ export interface PlannerBudget {
   ensembleTopK: number;
   /** Score candidates with an analytic completion attached (diagnostic). */
   autoComplete: boolean;
+  /** Rounds of explicit time-slot enumeration around the best candidates. */
+  slotRounds: number;
+  /** Candidates carried into each time-slot round. */
+  slotSeeds: number;
   /** Shooting-correction rounds applied to the best coarse candidates. */
   polishRounds: number;
   /** How many candidates enter each polish round. */
@@ -82,6 +87,8 @@ export const DEFAULT_BUDGET: PlannerBudget = {
   optimizers: ["proposals", "bnb", "cem"],
   ensembleTopK: 6,
   autoComplete: false,
+  slotRounds: 2,
+  slotSeeds: 2,
   polishRounds: 2,
   polishSeeds: 3,
 };
@@ -146,12 +153,21 @@ export function aggregateEnsemble(
   const worstFuel = Math.min(...evals.map((e) => e.fuel));
   const fuelFeas = Math.min(worstFuel, GATES.fuelFloor + FUEL_RESERVE);
   const pGates = evals.reduce((a, e, i) => a + (e.allGatesPass ? weights[i]! : 0), 0) / wsum;
+  const pDwell = evals.reduce((a, e, i) => a + (e.dwellHeld ? weights[i]! : 0), 0) / wsum;
   const sorted = [...costs].sort((a, b) => b - a);
   const kTail = Math.max(1, Math.ceil(cvarAlpha * n));
   const cvar = sorted.slice(0, kTail).reduce((a, b) => a + b, 0) / kTail;
   const mean = costs.reduce((a, c, i) => a + c * weights[i]!, 0) / wsum;
   const pulses = Math.max(...evals.map((e) => e.pulses));
-  const key = [pHard, -fuelFeas, -pGates, cvar, mean, pulses];
+  // Ranking order (spec section 9, refined by follow-up item B):
+  //   1. hard-constraint violation probability
+  //   2. worst-case fuel, saturated at the floor plus a reserve
+  //   3. probability that the *persistent* capture holds across the window - a
+  //      plan that merely grazes the box at the final instant ranks below one
+  //      that stays inside it
+  //   4. probability that the terminal gates hold at the mission end
+  //   5. CVaR of the scalar cost, then its mean, then pulse count
+  const key = [pHard, -fuelFeas, -pDwell, -pGates, cvar, mean, pulses];
   let rep = evals[0]!;
   for (const e of evals) if (e.worstRatio > rep.worstRatio) rep = e;
   return { key, cost: mean, rep };
@@ -183,6 +199,13 @@ function liveAt(live: readonly number[], params: PlantParams, tFinal: number): n
  */
 export const CAPTURE_RATE = 0.02;
 
+/**
+ * Length of the persistent-capture window, seconds. The joint terminal set has
+ * to hold across the whole window, which is what turns "the drift happened to
+ * sweep past the target" into a failing candidate.
+ */
+export const DWELL_WINDOW_S = 3.0;
+
 /** Solve one replanning epoch. */
 export function planHorizon(req: PlanRequest): PlanResult {
   const { cfg, start, params, sloshRef, tFinal, live, budget } = req;
@@ -202,6 +225,7 @@ export function planHorizon(req: PlanRequest): PlanResult {
       dt,
       coastDt,
       until: tFinal,
+      dwellWindowS: DWELL_WINDOW_S,
       sloshRef,
       audit: false,
     });
@@ -282,6 +306,10 @@ export function planHorizon(req: PlanRequest): PlanResult {
         gateExcess: 1e9,
         attitudeDeg: 1e9,
         omega: 1e9,
+        dwellAttitudeDeg: 1e9,
+        dwellOmega: 1e9,
+        dwellHeld: false,
+        pendingAtEnd: true,
         sloshRatio: 1e9,
         impactSpeed: 1e9,
         fuel: 0,
@@ -471,6 +499,44 @@ export function planHorizon(req: PlanRequest): PlanResult {
     perOptimizer.polish = {
       rollouts: rolloutCount - before,
       iterations: polishAdded,
+      cost: 0,
+      key: [0],
+    };
+  }
+
+  // ---------------------------------------------------------------------
+  // Explicit time-slot search (follow-up item C). Arrival slot, braking-start
+  // slot, dwell start and coast duration are all set by how many idle
+  // controller ticks precede the terminal burn group; pulse phase is set by
+  // its width in 40 ms quanta. Both integers are enumerated explicitly on the
+  // commandable grid rather than left to whichever arrival a generator
+  // proposed. The enumeration is fixed and ordered, hence deterministic.
+  // ---------------------------------------------------------------------
+  if (budget.slotRounds > 0 && shortlist.length > 0) {
+    const before = rolloutCount;
+    let slotAdded = 0;
+    let frontier = [...shortlist]
+      .sort((a, b) => a.coarseCost - b.coarseCost || a.label.localeCompare(b.label))
+      .slice(0, budget.slotSeeds);
+    for (let round = 0; round < budget.slotRounds; round++) {
+      const produced: Array<{ label: string; seq: Segment[]; coarseCost: number }> = [];
+      for (const c of frontier) {
+        for (const v of slotVariants(c.seq, cfg.controllerPeriod)) {
+          if (!legalOnly(v.seq, live)) continue;
+          const sc = coarse(v.seq);
+          const row = { label: `${c.label}+${v.label}`, seq: v.seq, coarseCost: sc.cost };
+          shortlist.push(row);
+          produced.push(row);
+          slotAdded += 1;
+        }
+      }
+      produced.sort((a, b) => a.coarseCost - b.coarseCost || a.label.localeCompare(b.label));
+      frontier = produced.slice(0, budget.slotSeeds);
+      if (frontier.length === 0) break;
+    }
+    perOptimizer.slot = {
+      rollouts: rolloutCount - before,
+      iterations: slotAdded,
       cost: 0,
       key: [0],
     };
