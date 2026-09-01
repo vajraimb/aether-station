@@ -1,0 +1,139 @@
+{
+  "release": "v0.1.0-benchmark",
+  "kind": "benchmark_release",
+  "generatedAt": "2026-09-01T03:26:53.959Z",
+  "codeSha": "f5d78d92b05389027ce0ac5dfa962a271c611702",
+  "branch": "release/v0.1.0-benchmark",
+  "freezeSha": "4b5d7a6b2450f3e4613e50a9d77d9a5dfbaf15e4",
+  "physicsSha": "bdfff5b4c62733d7156d2f9cdeeaa75661d6c9f4",
+  "physicsKernelUnchanged": true,
+  "tags": {
+    "v0.1.0-benchmark": "this release",
+    "benchmark/research-phase-complete-v1": "4b5d7a6b2450f3e4613e50a9d77d9a5dfbaf15e4",
+    "archive/control-v2-final": "0d871b4e45dd918edbce08b02d234b981aadf3a1",
+    "archive/action-macro-belief-audit": "7c3eca07c6f3f91386d302d806c3e39d6348109e",
+    "archive/wrench-nullspace-study": "38d2c741ebad6cb3ae6443337fd0678609b2c6bc",
+    "archive/robust-terminal-study": "3b6b5daa9a0de9719a7eaf191c894fbc2be6d5d3"
+  },
+  "card": {
+    "physicsValidity": "PASS",
+    "benchmarkInfrastructure": "PASS",
+    "baselineControl": "FAIL",
+    "taskSolved": "NO",
+    "researchBenchmarkReady": "YES"
+  },
+  "claims": [
+    {
+      "type": "measured",
+      "statement": "Physics kernel matches bdfff5b (math3d/dynamics/audit).",
+      "evidence_artifact": "outputs/conservation.json"
+    },
+    {
+      "type": "measured",
+      "statement": "Baseline train-10 all-gates 0/10.",
+      "evidence_artifact": "outputs/eval-baseline-train10.json"
+    },
+    {
+      "type": "measured",
+      "statement": "discrete-pulse-v2 / kNN-value train-10 all-gates 0/10. kNN STOPPED.",
+      "evidence_artifact": "outputs/eval-v2-train10.json"
+    },
+    {
+      "type": "search_unreached",
+      "statement": "Robust terminal cancellation 6/42 nominal capture. Not a proof of impossibility.",
+      "evidence_artifact": "outputs/robust-terminal-study.json"
+    },
+    {
+      "type": "deprecated",
+      "statement": "Do not wire kNN, macros, null-space, or robust-terminal as flight code.",
+      "evidence_artifact": "docs/research-phase.md"
+    }
+  ],
+  "artifacts": [
+    {
+      "path": "docs/benchmark.md",
+      "sha256": "00c3937fbf5229628fb4d2b7cc937b55a65ccda5bfe80e996aaacf7c99d24ce8",
+      "bytes": 1515
+    },
+    {
+      "path": "docs/release/benchmark-card.md",
+      "sha256": "f074393395c9c6fc903dbc7f7928bd676dbcf7049508c14597063139de5b00e0",
+      "bytes": 1993
+    },
+    {
+      "path": "docs/release/model-card.md",
+      "sha256": "d0370dd71a6e8741c361196b37726a1dbb6c7343032bf4bf5d479a6b7561c2f2",
+      "bytes": 1158
+    },
+    {
+      "path": "docs/release/reproduction.md",
+      "sha256": "c990a15548c51cf976d7c90a47439607338bbf714b59a904af5ec2102eaf5581",
+      "bytes": 1196
+    },
+    {
+      "path": "docs/research-phase.md",
+      "sha256": "095083f80454e0ab9089835f634e7a01efc755726bf8b15b94b615687892bae6",
+      "bytes": 3513
+    },
+    {
+      "path": "outputs/ARTIFACTS.md",
+      "sha256": "2f731a5f62e2d5c735ae6a1d190783a5f35ed5d96615915ec2456c18b6712d34",
+      "bytes": 1771
+    },
+    {
+      "path": "outputs/conservation.json",
+      "sha256": "f718f7f98c22deb329af0114d1687abd9a09b47a05a2c9afd0be921b4c50027f",
+      "bytes": 4476
+    },
+    {
+      "path": "outputs/eval-ablation-train10.json",
+      "sha256": "a15ef2e0d378319dc1e84e1c80a7326d349d1eb736270b0316adde91cb96f10e",
+      "bytes": 14169
+    },
+    {
+      "path": "outputs/eval-baseline-train10.json",
+      "sha256": "a25ffbe26788a81831cdec35bf4c76b43e1569ba92b0f14bd0fa83e0c929354d",
+      "bytes": 8841
+    },
+    {
+      "path": "outputs/eval-v2-train10.json",
+      "sha256": "a5f6e1e9201580c5700654ef2553721e0cd10e04595a2be528462a37718b5fe8",
+      "bytes": 8763
+    },
+    {
+      "path": "outputs/reachability.json",
+      "sha256": "a751f29b2dee6c9dd5ff0e66869c882fb8db1fce201444b30fe0df000d812553",
+      "bytes": 4648
+    },
+    {
+      "path": "outputs/v2-failure-traces/summary.json",
+      "sha256": "b580a56f0a55903fb738d5362365e4b28fa72df49dcf413583495830f331c60f",
+      "bytes": 2037
+    },
+    {
+      "path": "src/sim/arena.ts",
+      "sha256": "1af93b8c84e2b5636f5fd3c2c72a9d26325ae0c8d1875face842543260163de7",
+      "bytes": 912
+    },
+    {
+      "path": "src/sim/audit.ts",
+      "sha256": "96b445596c5175e94e29c2f877bcd7a7f255521a0936459f9f8780bf34e21549",
+      "bytes": 15515
+    },
+    {
+      "path": "src/sim/core.ts",
+      "sha256": "842875e1b5c1564694741b3c4b2c9878a8d354a69edd26629d2d2fc664a88305",
+      "bytes": 778
+    },
+    {
+      "path": "src/sim/dynamics.ts",
+      "sha256": "f23b1ea3bbc170743df442105636866df848033522bd6ed6e92afca69b62ca11",
+      "bytes": 20352
+    },
+    {
+      "path": "src/sim/math3d.ts",
+      "sha256": "6c131732fd5590930a58555fa16361bf2f7421eedeb47870c3f282754b9da158",
+      "bytes": 8641
+    }
+  ]
+}

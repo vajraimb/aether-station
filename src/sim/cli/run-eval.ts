@@ -10,7 +10,7 @@ import { createPlantController } from "../control/factory.ts";
 import { generateScenario } from "../scenario.ts";
 import { Simulator } from "../simulator.ts";
 import { writeJson } from "../io.ts";
-import { HIDDEN_SEEDS, TRAIN_SEEDS } from "../evalset.ts";
+import { HIDDEN_SEEDS, SMOKE_SEEDS, TRAIN_SEEDS } from "../evalset.ts";
 import { TruthFeedbackBaseline } from "../oracle.ts";
 import type { ControllerMode } from "../control/interface.ts";
 import type { Metrics } from "../types.ts";
@@ -55,17 +55,25 @@ function summarize(values: number[]) {
 
 const setName = (arg("--set", "train") || "train").toLowerCase();
 const controllerFlag = (arg("--controller", "baseline") || "baseline").toLowerCase();
-const seeds = (setName === "hidden" ? HIDDEN_SEEDS : TRAIN_SEEDS).slice();
+const seeds =
+  setName === "hidden" ? HIDDEN_SEEDS.slice() : setName === "smoke" ? SMOKE_SEEDS.slice() : TRAIN_SEEDS.slice();
 const count = Math.max(1, Number(arg("--count", String(seeds.length))));
 const useOracle = process.argv.includes("--oracle") || controllerFlag === "oracle";
 const mode: ControllerMode = controllerFlag === "discrete-pulse-v2" ? "discrete-pulse-v2" : "baseline";
 const defaultOut =
   setName === "hidden"
     ? "outputs/hidden-eval.json"
-    : mode === "discrete-pulse-v2"
-      ? "outputs/eval-v2-train10.json"
-      : "outputs/eval-baseline-train10.json";
-const outPath = arg("--out", count === 10 && setName === "train" ? defaultOut : `outputs/eval-${controllerFlag}-${setName}${count}.json`);
+    : setName === "smoke"
+      ? "outputs/eval-smoke.json"
+      : mode === "discrete-pulse-v2"
+        ? "outputs/eval-v2-train10.json"
+        : "outputs/eval-baseline-train10.json";
+const outPath = arg(
+  "--out",
+  setName === "smoke" || (count === 10 && setName === "train")
+    ? defaultOut
+    : `outputs/eval-${controllerFlag}-${setName}${count}.json`,
+);
 const picked = seeds.slice(0, count);
 
 if (setName === "hidden" && !process.argv.includes("--force-hidden")) {
@@ -204,6 +212,10 @@ if (controllerFlag === "discrete-pulse-v2" || mode === "discrete-pulse-v2") {
 console.log("\n--- eval ---");
 console.log(JSON.stringify(summary.rates, null, 2));
 console.log("pass", summary.pass);
+if (setName === "smoke") {
+  console.log("SMOKE runner complete (control FAIL is expected; not a capture gate)");
+  process.exit(0);
+}
 const stageOne =
   setName === "train" &&
   n <= 10 &&

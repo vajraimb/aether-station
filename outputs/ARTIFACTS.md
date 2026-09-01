@@ -24,5 +24,7 @@ Do not treat study JSON as a flight controller.
 | `outputs/action-macro-library.json` | `npm run eval:action-macros` |
 | `outputs/wrench-nullspace-study.json` | `npm run eval:wrench-nullspace` |
 | `outputs/robust-terminal-study.json` | `npm run eval:robust-terminal` |
+| `outputs/release/release-manifest.json` | `npm run release:manifest` |
+| `outputs/release/checksums.sha256` | `npm run release:manifest` |
 
 Do not commit `outputs/runs/`, per-seed CSV, or multi-megabyte JSON traces.

@@ -5,6 +5,8 @@
  */
 export const TRAIN_SEEDS: number[] = Array.from({ length: 50 }, (_, i) => 800_000 + i * 17);
 export const HIDDEN_SEEDS: number[] = Array.from({ length: 50 }, (_, i) => 910_000 + i * 97);
+/** Publication smoke: first two public train seeds. Not a capture gate. */
+export const SMOKE_SEEDS: number[] = TRAIN_SEEDS.slice(0, 2);
 
 export const FUEL_FLOOR = 2.82;
 export const FUEL_HARD = 2.8;

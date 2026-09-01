@@ -55,5 +55,10 @@ export function runBenchmarkContractTests(): T[] {
   check("arena_no_research_hooks", !importsOf(arenaSrc).some(bannedMod), importsOf(arenaSrc).join(","), out);
   check("core_no_research_hooks", !importsOf(coreSrc).some(bannedMod), importsOf(coreSrc).join(","), out);
   check("arena_no_simulator_export", !importsOf(arenaSrc).some((id) => /simulator/.test(id)), "no Simulator", out);
+
+  const card = readFileSync(join(here, "../../docs/release/benchmark-card.md"), "utf8");
+  check("release_card_task_unsolved", /Task solved:\s*NO/.test(card), "Task solved: NO", out);
+  check("release_card_baseline_fail", /Baseline control:\s*FAIL/.test(card), "Baseline control: FAIL", out);
+  check("release_card_ready", /Research benchmark ready:\s*YES/.test(card), "ready YES", out);
   return out;
 }

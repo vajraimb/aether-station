@@ -42,6 +42,8 @@ outputs/belief-truth-audit-train10.quick.json
 outputs/wrench-nullspace-study.quick.json
 outputs/robust-terminal-study.quick.json
 outputs/eval-knn-tail2.json
+outputs/*.csv
+outputs/eval-smoke.json
 
 # OS / editor
 .DS_Store

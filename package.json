@@ -1,5 +1,6 @@
 {
   "name": "aether-station",
+  "version": "0.1.0-benchmark",
   "private": true,
   "sideEffects": false,
   "type": "module",
@@ -23,7 +24,8 @@
     "score": "npx tsx src/sim/cli/run-score.ts",
     "test:physics": "npx tsx src/sim/cli/run-physics.ts",
     "eval": "npx tsx src/sim/cli/run-eval.ts",
-    "eval:smoke": "npx tsx src/sim/cli/run-eval.ts --controller baseline --set train --count 2 --out outputs/eval-smoke.json",
+    "eval:smoke": "npx tsx src/sim/cli/run-eval.ts --controller baseline --set smoke",
+    "release:manifest": "npx tsx src/sim/cli/run-release.ts",
     "eval:rollout-error": "npx tsx src/sim/cli/run-rollout-error.ts",
     "eval:traces": "npx tsx src/sim/cli/run-failure-traces.ts",
     "eval:capture-reachability": "npx tsx src/sim/cli/run-capture-reachability.ts",
