@@ -11,7 +11,7 @@ import { writeJson, writeText } from "../io.ts";
 
 export const PHYSICS_SHA = "bdfff5b4c62733d7156d2f9cdeeaa75661d6c9f4";
 export const FREEZE_SHA = "4b5d7a6b2450f3e4613e50a9d77d9a5dfbaf15e4";
-export const RELEASE_ID = "v0.1.0-benchmark";
+export const RELEASE_ID = "v0.2.0-arena";
 
 const ROOT = join(import.meta.dirname, "../../..");
 
@@ -40,7 +40,7 @@ function walk(dir: string, acc: string[] = []): string[] {
   return acc;
 }
 
-const ARTIFACT_DIRS = ["docs/release", "docs/research-phase.md", "docs/benchmark.md", "outputs/ARTIFACTS.md"];
+const ARTIFACT_DIRS = ["docs/release", "docs/research-phase.md", "docs/benchmark.md", "docs/cross-domain.md", "outputs/ARTIFACTS.md"];
 const ARTIFACT_GLOBS = [
   "outputs/eval-baseline-train10.json",
   "outputs/eval-v2-train10.json",
@@ -48,11 +48,19 @@ const ARTIFACT_GLOBS = [
   "outputs/conservation.json",
   "outputs/reachability.json",
   "outputs/v2-failure-traces/summary.json",
+  "outputs/inventory/smoke.json",
+  "outputs/runs/station-baseline-smoke/manifest.json",
+  "outputs/runs/station-baseline-smoke/metrics.json",
+  "outputs/runs/station-baseline-smoke/claims.json",
+  "outputs/runs/inventory-reorder-smoke/manifest.json",
+  "outputs/runs/inventory-reorder-smoke/metrics.json",
+  "outputs/runs/inventory-reorder-smoke/claims.json",
   "src/sim/core.ts",
   "src/sim/arena.ts",
   "src/sim/math3d.ts",
   "src/sim/dynamics.ts",
   "src/sim/audit.ts",
+  "packages/agent-arena/src/index.ts",
 ];
 
 function collectFiles(): string[] {
@@ -88,7 +96,8 @@ const manifest = {
   physicsSha: PHYSICS_SHA,
   physicsKernelUnchanged: kernelDiff === "",
   tags: {
-    "v0.1.0-benchmark": "this release",
+    "v0.2.0-arena": "this release",
+    "v0.1.0-benchmark": "486099c2f7378bd3bea3fca9e7e9296b3bcb4e4e",
     "benchmark/research-phase-complete-v1": FREEZE_SHA,
     "archive/control-v2-final": "0d871b4e45dd918edbce08b02d234b981aadf3a1",
     "archive/action-macro-belief-audit": "7c3eca07c6f3f91386d302d806c3e39d6348109e",
@@ -98,9 +107,12 @@ const manifest = {
   card: {
     physicsValidity: "PASS",
     benchmarkInfrastructure: "PASS",
+    agentArena: "PASS",
+    crossDomainValidation: "PASS",
     baselineControl: "FAIL",
+    inventoryPolicy: "FAIL",
     taskSolved: "NO",
-    researchBenchmarkReady: "YES",
+    simCoreExtraction: "DEFERRED",
   },
   claims: [
     {
@@ -124,9 +136,14 @@ const manifest = {
       evidence_artifact: "outputs/robust-terminal-study.json",
     },
     {
-      type: "deprecated",
-      statement: "Do not wire kNN, macros, null-space, or robust-terminal as flight code.",
-      evidence_artifact: "docs/research-phase.md",
+      type: "measured",
+      statement: "Inventory reorder-point smoke 0/6 all-gates. Cross-domain infrastructure PASS.",
+      evidence_artifact: "outputs/inventory/smoke.json",
+    },
+    {
+      type: "measured",
+      statement: "AgentArena core files unchanged vs acb6d8f.",
+      evidence_artifact: "docs/cross-domain.md",
     },
   ],
   artifacts: checksums,

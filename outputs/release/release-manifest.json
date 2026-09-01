@@ -1,14 +1,15 @@
 {
-  "release": "v0.1.0-benchmark",
+  "release": "v0.2.0-arena",
   "kind": "benchmark_release",
-  "generatedAt": "2026-09-01T03:26:53.959Z",
-  "codeSha": "f5d78d92b05389027ce0ac5dfa962a271c611702",
-  "branch": "release/v0.1.0-benchmark",
+  "generatedAt": "2026-09-01T04:20:36.770Z",
+  "codeSha": "467a5704547ca1b2c4f04aff324c67e0d0c77e69",
+  "branch": "release/v0.2.0-arena",
   "freezeSha": "4b5d7a6b2450f3e4613e50a9d77d9a5dfbaf15e4",
   "physicsSha": "bdfff5b4c62733d7156d2f9cdeeaa75661d6c9f4",
   "physicsKernelUnchanged": true,
   "tags": {
-    "v0.1.0-benchmark": "this release",
+    "v0.2.0-arena": "this release",
+    "v0.1.0-benchmark": "486099c2f7378bd3bea3fca9e7e9296b3bcb4e4e",
     "benchmark/research-phase-complete-v1": "4b5d7a6b2450f3e4613e50a9d77d9a5dfbaf15e4",
     "archive/control-v2-final": "0d871b4e45dd918edbce08b02d234b981aadf3a1",
     "archive/action-macro-belief-audit": "7c3eca07c6f3f91386d302d806c3e39d6348109e",
@@ -18,9 +19,12 @@
   "card": {
     "physicsValidity": "PASS",
     "benchmarkInfrastructure": "PASS",
+    "agentArena": "PASS",
+    "crossDomainValidation": "PASS",
     "baselineControl": "FAIL",
+    "inventoryPolicy": "FAIL",
     "taskSolved": "NO",
-    "researchBenchmarkReady": "YES"
+    "simCoreExtraction": "DEFERRED"
   },
   "claims": [
     {
@@ -44,16 +48,31 @@
       "evidence_artifact": "outputs/robust-terminal-study.json"
     },
     {
-      "type": "deprecated",
-      "statement": "Do not wire kNN, macros, null-space, or robust-terminal as flight code.",
-      "evidence_artifact": "docs/research-phase.md"
+      "type": "measured",
+      "statement": "Inventory reorder-point smoke 0/6 all-gates. Cross-domain infrastructure PASS.",
+      "evidence_artifact": "outputs/inventory/smoke.json"
+    },
+    {
+      "type": "measured",
+      "statement": "AgentArena core files unchanged vs acb6d8f.",
+      "evidence_artifact": "docs/cross-domain.md"
     }
   ],
   "artifacts": [
     {
       "path": "docs/benchmark.md",
-      "sha256": "00c3937fbf5229628fb4d2b7cc937b55a65ccda5bfe80e996aaacf7c99d24ce8",
-      "bytes": 1515
+      "sha256": "65f6135757e621d484730ef3ea7074bd56ae773a2e1796287871558bf8a66c37",
+      "bytes": 1638
+    },
+    {
+      "path": "docs/cross-domain.md",
+      "sha256": "7b071bfb2cd620d5f98730037fedacab77954b785e26201fec72c5d53d8cdc5c",
+      "bytes": 2442
+    },
+    {
+      "path": "docs/release/arena-card.md",
+      "sha256": "aeca96ba497f035259e2d316823a1d898083ba795f927a95ca6046e60480ef2d",
+      "bytes": 1323
     },
     {
       "path": "docs/release/benchmark-card.md",
@@ -67,18 +86,18 @@
     },
     {
       "path": "docs/release/reproduction.md",
-      "sha256": "c990a15548c51cf976d7c90a47439607338bbf714b59a904af5ec2102eaf5581",
-      "bytes": 1196
+      "sha256": "9b1fa4917ab77b0e2d4a36261635b32616197d3673f018f4be0f2ed1781683ce",
+      "bytes": 1640
     },
     {
       "path": "docs/research-phase.md",
-      "sha256": "095083f80454e0ab9089835f634e7a01efc755726bf8b15b94b615687892bae6",
-      "bytes": 3513
+      "sha256": "7c7a60bea990871005916f1e5ba17822a4674a107e90b79bb391eb618b08a854",
+      "bytes": 3671
     },
     {
       "path": "outputs/ARTIFACTS.md",
-      "sha256": "2f731a5f62e2d5c735ae6a1d190783a5f35ed5d96615915ec2456c18b6712d34",
-      "bytes": 1771
+      "sha256": "9914f970879b49625aa26d420b4363de98c835a8392b227fd9d5bf81d74e0b62",
+      "bytes": 2318
     },
     {
       "path": "outputs/conservation.json",
@@ -101,14 +120,54 @@
       "bytes": 8763
     },
     {
+      "path": "outputs/inventory/smoke.json",
+      "sha256": "112b229d0a80b9d2098cd7e2244239f55110c3e403804b417b0eef0a06f06aab",
+      "bytes": 1313
+    },
+    {
       "path": "outputs/reachability.json",
       "sha256": "a751f29b2dee6c9dd5ff0e66869c882fb8db1fce201444b30fe0df000d812553",
       "bytes": 4648
     },
     {
+      "path": "outputs/runs/inventory-reorder-smoke/claims.json",
+      "sha256": "f90a66a17b6b25e471e7126d1039d5c2539df4e6c0e11568c2446c7b0aa99e2d",
+      "bytes": 195
+    },
+    {
+      "path": "outputs/runs/inventory-reorder-smoke/manifest.json",
+      "sha256": "cce84cf58d4e47c8687323bc3773fed04bb5628c6bb78bc1caf69c2f834f2319",
+      "bytes": 358
+    },
+    {
+      "path": "outputs/runs/inventory-reorder-smoke/metrics.json",
+      "sha256": "7eb6bed78a4ca44a99dfe1dad30c40e2ae1af983039b7ce7a456fd348b21afe2",
+      "bytes": 231
+    },
+    {
+      "path": "outputs/runs/station-baseline-smoke/claims.json",
+      "sha256": "90ebbc07611d484668835d5dcd7f3a78b075c0fc1f67ea26e6c91b5c50d71ebd",
+      "bytes": 200
+    },
+    {
+      "path": "outputs/runs/station-baseline-smoke/manifest.json",
+      "sha256": "6811ab5ef0271633f3c1db5e8a11721048a838058b291cd64f8904a6ac752db7",
+      "bytes": 306
+    },
+    {
+      "path": "outputs/runs/station-baseline-smoke/metrics.json",
+      "sha256": "822867608de661b4104a8918216e624b3eeb0b090dde60006d1d2439a61b4ff5",
+      "bytes": 50
+    },
+    {
       "path": "outputs/v2-failure-traces/summary.json",
       "sha256": "b580a56f0a55903fb738d5362365e4b28fa72df49dcf413583495830f331c60f",
       "bytes": 2037
+    },
+    {
+      "path": "packages/agent-arena/src/index.ts",
+      "sha256": "4e8a89669e2922079be7512d448eaffb949e59b955621b26ee33ca99da824795",
+      "bytes": 571
     },
     {
       "path": "src/sim/arena.ts",

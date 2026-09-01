@@ -45,12 +45,18 @@ Those are not the same implementation. Do **not** extract `packages/sim-core` ye
 
 Reorder-point smoke **0/6 all-gates**. Fill rates 0.42–0.89. Cash stayed positive. This validates the platform, not the stocking rule.
 
-```text
-BENCHMARK v0.1: RELEASED (tag v0.1.0-benchmark @ 486099c, immutable)
-EXPERIMENT LEDGER: PASS
-EXPERIMENT STORE: PASS
-AGENT ARENA EXTRACTION: PASS
-CROSS-DOMAIN VALIDATION: PASS (interfaces)
-INVENTORY POLICY: FAIL
-SIMCORE EXTRACTION: DEFERRED
-```
+## Reuse matrix (SimCore still deferred)
+
+| Capability | AETHER | Inventory | Extract? |
+|---|---|---|---|
+| Seeded RNG | yes | yes | candidate later |
+| Delay buffer | yes | yes | candidate later |
+| Event queue | yes | yes | candidate later |
+| Run manifest | yes | yes | already in Arena / ledger |
+| Recorder | yes | yes | already in Arena |
+| RK4 | yes | no | no |
+| Collision | yes | no | no |
+| Quaternion | yes | no | no |
+| Inventory lead time | no | yes | no |
+
+Do not extract `packages/sim-core` or `packages/sim-runtime` until a dual-domain trajectory parity test exists. Inventory policy remains FAIL on purpose.

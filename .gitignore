@@ -30,7 +30,6 @@ artifacts/
 attachments/
 
 # bulky generated traces — regenerate via commands in outputs/ARTIFACTS.md
-outputs/runs/
 outputs/v2-failure-traces/*.csv
 outputs/v2-failure-traces/*.json
 !outputs/v2-failure-traces/summary.json
@@ -46,6 +45,9 @@ outputs/*.csv
 outputs/eval-smoke.json
 outputs/ledger/*.sqlite
 outputs/inventory/*/
+outputs/runs/**/trajectory.csv
+outputs/runs/**/events.jsonl
+outputs/runs/**/eval.json
 
 # OS / editor
 .DS_Store

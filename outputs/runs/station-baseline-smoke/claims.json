@@ -1,0 +1,7 @@
+[
+  {
+    "type": "measured",
+    "statement": "Station baseline smoke all-gates FAIL is expected. Task solved: NO.",
+    "evidence_artifact": "outputs/runs/station-baseline-smoke/metrics.json"
+  }
+]

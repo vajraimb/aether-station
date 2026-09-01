@@ -1,0 +1,7 @@
+[
+  {
+    "type": "measured",
+    "statement": "Reorder-point inventory smoke 0/6 all-gates. Platform ran; policy is not the test.",
+    "evidence_artifact": "outputs/inventory/smoke.json"
+  }
+]

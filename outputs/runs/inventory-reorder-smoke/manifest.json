@@ -1,0 +1,12 @@
+{
+  "run_id": "inventory-reorder-smoke",
+  "domain": "inventory",
+  "agent": "reorder-point",
+  "scenario": "smoke",
+  "status": "failed",
+  "reproduction_command": "npm run arena -- --domain inventory --agent reorder-point --scenario smoke",
+  "artifacts": [
+    "outputs/inventory/smoke.json",
+    "outputs/runs/inventory-reorder-smoke/metrics.json"
+  ]
+}

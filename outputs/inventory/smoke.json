@@ -53,5 +53,6 @@
       "violations": 0
     }
   ],
+  "run_id": "inventory-reorder-smoke",
   "note": "Baseline is expected to FAIL all-gates. This smoke checks the platform, not policy quality."
 }

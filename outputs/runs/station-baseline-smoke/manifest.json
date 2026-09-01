@@ -1,0 +1,11 @@
+{
+  "run_id": "station-baseline-smoke",
+  "domain": "station",
+  "agent": "baseline",
+  "scenario": "smoke",
+  "status": "failed",
+  "reproduction_command": "npm run arena -- --domain station --agent baseline --scenario smoke",
+  "artifacts": [
+    "outputs/runs/station-baseline-smoke/metrics.json"
+  ]
+}

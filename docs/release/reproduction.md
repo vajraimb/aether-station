@@ -1,41 +1,48 @@
-# Reproduction — AETHER Benchmark v0.1.0
+# Reproduction — AgentArena v0.2.0
 
 Pinned references (prefer tags and hashes over branch names):
 
 | Ref | Value |
 |---|---|
-| Release tag | `v0.1.0-benchmark` |
-| Freeze tag | `benchmark/research-phase-complete-v1` |
-| Freeze commit | `4b5d7a6b2450f3e4613e50a9d77d9a5dfbaf15e4` |
+| Release tag | `v0.2.0-arena` |
+| Parent tag | `v0.1.0-benchmark` @ `486099c` (do not move) |
+| Freeze tag | `benchmark/research-phase-complete-v1` @ `4b5d7a6` |
 | Physics kernel | `bdfff5b4c62733d7156d2f9cdeeaa75661d6c9f4` |
-| Branch (moving) | `release/v0.1.0-benchmark` |
+| Branch (moving) | `release/v0.2.0-arena` |
 
 ## Commands
 
 ```bash
-git checkout v0.1.0-benchmark
+git checkout v0.2.0-arena
 npm ci
 npm run check
 npm run test:physics -- --full
-npm run eval -- --controller baseline --set smoke
+npm run test:arena
+npm run arena -- --domain station --agent baseline --scenario smoke
+npm run arena -- --domain inventory --agent reorder-point --scenario smoke
+npm run ledger:ingest -- --memory
 npm run release:manifest
 ```
-
-`npm run build` is the web demo. It is not required to score the plant.
 
 ## Expected
 
 | Check | Result |
 |---|---|
-| `git diff bdfff5b -- src/sim/math3d.ts src/sim/dynamics.ts src/sim/audit.ts` | empty |
-| `test:physics --full` | 270/270 PASS |
-| baseline smoke | runner completes; **control FAIL is expected** |
-| `outputs/release/release-manifest.json` | physics SHA + artifact checksums |
+| physics kernel diff vs `bdfff5b` | empty |
+| `test:physics --full` | PASS |
+| station smoke | runner completes; **control FAIL** |
+| inventory smoke | runner completes; **policy FAIL** (0/6) |
+| AgentArena core vs `acb6d8f` | empty diff on agent/environment/runner/scorer |
 
-## Artifact hashes
+## Inventory evidence
 
-After `npm run release:manifest`, compare `outputs/release/checksums.sha256`.
+| Item | Value |
+|---|---|
+| Command | `npm run inventory:smoke` or `npm run arena -- --domain inventory --agent reorder-point --scenario smoke` |
+| Tracked aggregate | `outputs/inventory/smoke.json` |
+| Unified run | `outputs/runs/inventory-reorder-smoke/{manifest,metrics,claims}.json` |
+| Version controlled | yes (JSON above). Per-scenario `outputs/inventory/<id>/*.csv` is gitignored |
+| Re-score | `InventoryScorer.score(trajectory.csv, events.jsonl)` after a local smoke |
+| Ledger `run_id` | `inventory-reorder-smoke` |
 
-## Closed claims (do not re-run as if open)
-
-See `docs/research-phase.md` and archive tags. Hidden set stays blocked.
+Not a path: `outputs/inventory-smoke.json`.

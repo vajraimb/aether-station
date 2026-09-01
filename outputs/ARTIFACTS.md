@@ -28,6 +28,8 @@ Do not treat study JSON as a flight controller.
 | `outputs/release/checksums.sha256` | `npm run release:manifest` |
 | `outputs/ledger/index.json` | `npm run ledger:stamp` |
 | `outputs/ledger/experiments.sqlite` | `npm run ledger:ingest` (gitignored) |
-| `outputs/inventory/smoke.json` | `npm run inventory:smoke` |
+| `outputs/inventory/smoke.json` | `npm run inventory:smoke` (tracked; **not** `outputs/inventory-smoke.json`) |
+| `outputs/runs/inventory-reorder-smoke/{manifest,metrics,claims}.json` | `npm run arena -- --domain inventory --agent reorder-point --scenario smoke` |
+| `outputs/runs/station-baseline-smoke/{manifest,metrics,claims}.json` | `npm run arena -- --domain station --agent baseline --scenario smoke` |
 
 Do not commit `outputs/runs/`, per-seed CSV, or multi-megabyte JSON traces.

@@ -18,7 +18,7 @@ OVERALL CONTROL TASK: FAIL
 RESEARCH PHASE: COMPLETE
 ```
 
-Frozen kernel: `bdfff5b` (`math3d.ts` / `dynamics.ts` / `audit.ts`). Surfaces: `src/sim/core.ts` (SimCore), `src/sim/arena.ts` (AgentArena), `outputs/ARTIFACTS.md` (ledger). Archive: `docs/research-phase.md`. Tag: `v0.1.0-benchmark` (freeze `benchmark/research-phase-complete-v1` @ `4b5d7a6`). Cards: `docs/release/`.
+Frozen kernel: `bdfff5b` (`math3d.ts` / `dynamics.ts` / `audit.ts`). Surfaces: `packages/agent-arena` (generic), `src/sim/adapters/station.ts` (AETHER), `domains/inventory` (second domain). Archive: `docs/research-phase.md`. Tags: `v0.1.0-benchmark` @ `486099c` (immutable), `v0.2.0-arena` (this release). Cards: `docs/release/`.
 
 Demo seed `20260831`: `c1=0.137`, `c2=0.091`, `k12=0.318`, `ηT=0.873`, fault at 73.4 s on +Y. Do not retune PD on this seed.
 

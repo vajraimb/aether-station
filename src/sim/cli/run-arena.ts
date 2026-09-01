@@ -1,6 +1,7 @@
 #!/usr/bin/env npx tsx
 /** AgentArena leak + domain adapter tests. No 180s physics. */
 import { runStationAdapterTests } from "../adapters/station.test.ts";
+import { runBundleTests } from "./run-bundle.test.ts";
 import { runInventoryScorerTests } from "../../../domains/inventory/scorer.test.ts";
 import { runInventoryAgentTests } from "../../../domains/inventory/agent.test.ts";
 import { runInventoryEnvTests } from "../../../domains/inventory/environment.test.ts";
@@ -8,6 +9,7 @@ import { runInventoryObserveTests } from "../../../domains/inventory/observe.tes
 import { runInventoryScenarioTests } from "../../../domains/inventory/scenario.test.ts";
 
 const rows = [
+  ...runBundleTests(),
   ...runStationAdapterTests(),
   ...runInventoryScenarioTests(),
   ...runInventoryObserveTests(),
