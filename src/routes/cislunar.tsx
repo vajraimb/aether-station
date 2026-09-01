@@ -1,8 +1,7 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { CislunarApp } from "@/components/CislunarApp";
+import { createFileRoute, Navigate } from "@tanstack/react-router";
 
-export const Route = createFileRoute("/cislunar")({ component: CislunarPage });
+export const Route = createFileRoute("/cislunar")({ component: CislunarRedirect });
 
-function CislunarPage() {
-  return <CislunarApp />;
+function CislunarRedirect() {
+  return <Navigate to="/" replace />;
 }

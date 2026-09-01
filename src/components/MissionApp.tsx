@@ -294,7 +294,7 @@ export function MissionApp() {
             Station
           </span>
           <Link
-            to="/cislunar"
+            to="/"
             className="inline-flex h-11 items-center rounded-lg px-3 text-sm text-fg-muted hover:bg-bg-hover hover:text-fg"
           >
             Cislunar

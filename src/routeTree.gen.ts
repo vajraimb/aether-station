@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as CislunarRouteImport } from './routes/cislunar'
+import { Route as StationRouteImport } from './routes/station'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -22,31 +23,40 @@ const CislunarRoute = CislunarRouteImport.update({
   path: '/cislunar',
   getParentRoute: () => rootRouteImport,
 } as any)
+const StationRoute = StationRouteImport.update({
+  id: '/station',
+  path: '/station',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/cislunar': typeof CislunarRoute
+  '/station': typeof StationRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/cislunar': typeof CislunarRoute
+  '/station': typeof StationRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/cislunar': typeof CislunarRoute
+  '/station': typeof StationRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/cislunar'
+  fullPaths: '/' | '/cislunar' | '/station'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/cislunar'
-  id: '__root__' | '/' | '/cislunar'
+  to: '/' | '/cislunar' | '/station'
+  id: '__root__' | '/' | '/cislunar' | '/station'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   CislunarRoute: typeof CislunarRoute
+  StationRoute: typeof StationRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -65,12 +75,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CislunarRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/station': {
+      id: '/station'
+      path: '/station'
+      fullPath: '/station'
+      preLoaderRoute: typeof StationRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   CislunarRoute: CislunarRoute,
+  StationRoute: StationRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

@@ -137,7 +137,7 @@ export function CislunarApp() {
         </div>
         <nav className="flex gap-1">
           <Link
-            to="/"
+            to="/station"
             className="inline-flex h-11 items-center rounded-lg px-3 text-sm text-fg-muted hover:bg-bg-hover hover:text-fg"
           >
             Station
