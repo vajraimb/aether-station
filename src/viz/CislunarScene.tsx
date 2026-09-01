@@ -42,6 +42,9 @@ const VIS_EARTH_HELIOS = 7.2;
 const VIS_MOON_HELIOS = 2.3;
 const VIS_MARS_R = 4.6;
 const VIS_LMO_R = 6.8;
+const WELL_RMIN = 16;
+const WELL_RMAX = 400;
+const WELL_AMP = 72;
 const SIDEREAL_DAY = 86164.0905;
 const SIDEREAL_YEAR = 365.256363 * 86400;
 const OBLIQUITY = (23.44 * Math.PI) / 180;
@@ -53,6 +56,20 @@ function sunDir(t: number): THREE.Vector3 {
 
 function vec3(p: readonly [number, number, number]): THREE.Vector3 {
   return new THREE.Vector3(p[0], p[1], p[2]);
+}
+
+/** Exaggerated 1/r embedding so the solar well is visible at orrery scale.
+ *  Real Schwarzschild radius of the Sun is ~3 km; here the dish is teaching geometry. */
+function spacetimeWell(rho: number): number {
+  const r = Math.max(rho, WELL_RMIN);
+  return -WELL_AMP * Math.pow(WELL_RMIN / r, 0.45);
+}
+
+function lift(p: THREE.Vector3, on: boolean): THREE.Vector3 {
+  if (!on) return p;
+  const rho = Math.hypot(p.x, p.z);
+  p.y += spacetimeWell(rho);
+  return p;
 }
 
 function visHelio(p: readonly [number, number, number]): THREE.Vector3 {
@@ -108,6 +125,64 @@ function craftVisual(sample: CislunarSample): THREE.Vector3 {
   const dist = VIS_LEO_R + u * (VIS_MOON_DIST - VIS_LLO_R - VIS_LEO_R);
   if (r.lengthSq() < 1e-8) return new THREE.Vector3(dist, 0, 0);
   return r.setLength(dist);
+}
+
+function SpacetimeFabric() {
+  const { surface, wires } = useMemo(() => {
+    const nr = 40;
+    const nth = 96;
+    const positions: number[] = [];
+    const indices: number[] = [];
+    for (let i = 0; i <= nr; i++) {
+      const rho = WELL_RMIN + (i / nr) * (WELL_RMAX - WELL_RMIN);
+      const y = spacetimeWell(rho);
+      for (let j = 0; j <= nth; j++) {
+        const th = (j / nth) * Math.PI * 2;
+        positions.push(rho * Math.cos(th), y, rho * Math.sin(th));
+      }
+    }
+    const cols = nth + 1;
+    for (let i = 0; i < nr; i++) {
+      for (let j = 0; j < nth; j++) {
+        const a = i * cols + j;
+        const b = a + 1;
+        const c = a + cols;
+        const d = c + 1;
+        indices.push(a, c, b, b, c, d);
+      }
+    }
+    const surface = new THREE.BufferGeometry();
+    surface.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
+    surface.setIndex(indices);
+    surface.computeVertexNormals();
+    const wires = new THREE.WireframeGeometry(surface);
+    return { surface, wires };
+  }, []);
+  useEffect(
+    () => () => {
+      surface.dispose();
+      wires.dispose();
+    },
+    [surface, wires],
+  );
+  return (
+    <group>
+      <mesh geometry={surface}>
+        <meshStandardMaterial
+          color="#243044"
+          transparent
+          opacity={0.42}
+          metalness={0.05}
+          roughness={0.92}
+          side={THREE.DoubleSide}
+          depthWrite={false}
+        />
+      </mesh>
+      <lineSegments geometry={wires}>
+        <lineBasicMaterial color="#6a92c8" transparent opacity={0.28} />
+      </lineSegments>
+    </group>
+  );
 }
 
 function Stars() {
@@ -378,9 +453,11 @@ function attitudeOf(sample: CislunarSample): THREE.Quaternion {
   return new THREE.Quaternion().setFromRotationMatrix(m);
 }
 
-function Sun({ t, helio }: { t: number; helio: boolean }) {
+function Sun({ t, helio, well = false }: { t: number; helio: boolean; well?: boolean }) {
   const dir = sunDir(t);
-  const pos = helio ? ORIGIN.clone() : dir.clone().multiplyScalar(720);
+  const pos = helio
+    ? new THREE.Vector3(0, well ? spacetimeWell(22) : 0, 0)
+    : dir.clone().multiplyScalar(720);
   const fill = dir.clone().multiplyScalar(-90);
   const disk = useMemo(() => makeSunDiskTexture(), []);
   const glow = useMemo(() => makeSunGlowTexture(), []);
@@ -531,8 +608,8 @@ export function CraftModel({
   );
 }
 
-function Probe({ sample }: { sample: CislunarSample }) {
-  const p = craftVisual(sample);
+function Probe({ sample, well = false }: { sample: CislunarSample; well?: boolean }) {
+  const p = lift(craftVisual(sample), well && isHelioPhase(sample.phase));
   const v = vec3(sample.v);
   const vDir = v.lengthSq() > 1e-10 ? v.clone().normalize() : new THREE.Vector3(0, 0, 1);
   const vTip: [number, number, number] = [vDir.x * 2.4, vDir.y * 2.4, vDir.z * 2.4];
@@ -544,7 +621,7 @@ function Probe({ sample }: { sample: CislunarSample }) {
   );
 }
 
-function Trajectory({ mission, helio }: { mission: CislunarMission; helio: boolean }) {
+function Trajectory({ mission, helio, well }: { mission: CislunarMission; helio: boolean; well: boolean }) {
   const segments = useMemo(() => {
     const byPhase: { phase: Phase; pts: [number, number, number][] }[] = [];
     let cur: Phase | null = null;
@@ -557,11 +634,11 @@ function Trajectory({ mission, helio }: { mission: CislunarMission; helio: boole
         cur = s.phase;
         pts = [];
       }
-      pts.push(craftVisual(s).toArray() as [number, number, number]);
+      pts.push(lift(craftVisual(s), well && helio).toArray() as [number, number, number]);
     }
     if (cur && pts.length > 1) byPhase.push({ phase: cur, pts });
     return byPhase;
-  }, [mission, helio]);
+  }, [mission, helio, well]);
   return (
     <group>
       {segments.map((seg, i) => (
@@ -571,16 +648,27 @@ function Trajectory({ mission, helio }: { mission: CislunarMission; helio: boole
   );
 }
 
-function OrbitRing({ radius, color, opacity = 0.4 }: { radius: number; color: string; opacity?: number }) {
+function OrbitRing({
+  radius,
+  color,
+  opacity = 0.4,
+  well = false,
+}: {
+  radius: number;
+  color: string;
+  opacity?: number;
+  well?: boolean;
+}) {
   const pts = useMemo(() => {
     const n = 128;
+    const y = well ? spacetimeWell(radius) : 0;
     const out: [number, number, number][] = [];
     for (let i = 0; i <= n; i++) {
       const th = (i / n) * Math.PI * 2;
-      out.push([radius * Math.cos(th), 0, radius * Math.sin(th)]);
+      out.push([radius * Math.cos(th), y, radius * Math.sin(th)]);
     }
     return out;
-  }, [radius]);
+  }, [radius, well]);
   return <Line points={pts} color={color} lineWidth={1} transparent opacity={opacity} />;
 }
 
@@ -600,12 +688,17 @@ function MarsOrbitRing({ mars }: { mars: THREE.Vector3 }) {
   );
 }
 
-function modeFraming(mode: CameraMode, sample: CislunarSample): { target: THREE.Vector3; position: THREE.Vector3 } {
-  const craft = craftVisual(sample);
-  const moon = moonVisual(sample);
-  const earth = earthVisual(sample);
-  const mars = marsVisual(sample);
+function modeFraming(
+  mode: CameraMode,
+  sample: CislunarSample,
+  well: boolean,
+): { target: THREE.Vector3; position: THREE.Vector3 } {
   const helio = isHelioPhase(sample.phase);
+  const apply = (p: THREE.Vector3) => lift(p, well && helio);
+  const craft = apply(craftVisual(sample));
+  const moon = apply(moonVisual(sample));
+  const earth = apply(earthVisual(sample));
+  const mars = apply(marsVisual(sample));
   const earthR = helio ? VIS_EARTH_HELIOS : VIS_EARTH_R;
   const moonR = helio ? VIS_MOON_HELIOS : VIS_MOON_R;
   if (mode === "earth") {
@@ -641,6 +734,12 @@ function modeFraming(mode: CameraMode, sample: CislunarSample): { target: THREE.
     };
   }
   if (helio) {
+    if (well) {
+      return {
+        target: new THREE.Vector3(0, spacetimeWell(140), 0),
+        position: new THREE.Vector3(40, 95, 390),
+      };
+    }
     return {
       target: ORIGIN.clone(),
       position: new THREE.Vector3(40, 210, 360),
@@ -657,14 +756,17 @@ function CameraRig({
   sample,
   mode,
   offset,
+  well,
 }: {
   sample: CislunarSample;
   mode: CameraMode;
   offset: MutableRefObject<THREE.Vector3>;
+  well: boolean;
 }) {
   const { camera, controls } = useThree();
   const lastMode = useRef<CameraMode | null>(null);
   const lastHelio = useRef<boolean | null>(null);
+  const lastWell = useRef<boolean | null>(null);
   const snap = useRef(1);
   const craftFollow = mode === "craft";
   const helio = isHelioPhase(sample.phase);
@@ -672,10 +774,11 @@ function CameraRig({
   useFrame((_, dt) => {
     const ctrl = controls as OrbitControlsImpl | null;
     if (!ctrl) return;
-    const frame = modeFraming(mode, sample);
-    if (lastMode.current !== mode || lastHelio.current !== helio) {
+    const frame = modeFraming(mode, sample, well);
+    if (lastMode.current !== mode || lastHelio.current !== helio || lastWell.current !== well) {
       lastMode.current = mode;
       lastHelio.current = helio;
+      lastWell.current = well;
       snap.current = 1;
       offset.current.copy(frame.position).sub(frame.target);
     }
@@ -703,32 +806,35 @@ function SceneBody({
   mission,
   sample,
   mode,
+  well,
 }: {
   mission: CislunarMission;
   sample: CislunarSample;
   mode: CameraMode;
+  well: boolean;
 }) {
   const helio = isHelioPhase(sample.phase);
-  const moonPos = moonVisual(sample);
-  const earthPos = earthVisual(sample);
-  const marsPos = marsVisual(sample);
-  const craftPos = craftVisual(sample);
+  const drape = well && helio;
+  const moonPos = lift(moonVisual(sample), drape);
+  const earthPos = lift(earthVisual(sample), drape);
+  const marsPos = lift(marsVisual(sample), drape);
+  const craftPos = lift(craftVisual(sample), drape);
   const controlsRef = useRef<OrbitControlsImpl>(null);
   const offset = useRef(new THREE.Vector3());
 
   return (
     <>
       <color attach="background" args={["#07080c"]} />
-      <Sun t={sample.t} helio={helio} />
+      <Sun t={sample.t} helio={helio} well={drape} />
       <Stars />
       {helio ? (
         <>
-          <gridHelper args={[900, 18, "#1c2230", "#12161f"]} />
+          {drape ? <SpacetimeFabric /> : <gridHelper args={[900, 18, "#1c2230", "#12161f"]} />}
           <Earth t={sample.t} radius={VIS_EARTH_HELIOS} position={earthPos} />
           <Moon pos={moonPos} face={earthPos} radius={VIS_MOON_HELIOS} />
           <Mars pos={marsPos} t={sample.t} />
-          <OrbitRing radius={VIS_AU} color="#6a92c8" opacity={0.35} />
-          <OrbitRing radius={VIS_MARS_ORBIT} color="#c88858" opacity={0.4} />
+          <OrbitRing radius={VIS_AU} color="#6a92c8" opacity={0.35} well={drape} />
+          <OrbitRing radius={VIS_MARS_ORBIT} color="#c88858" opacity={0.4} well={drape} />
           {isMarsPhase(sample.phase) && <MarsOrbitRing mars={marsPos} />}
         </>
       ) : (
@@ -740,10 +846,10 @@ function SceneBody({
           <LunarOrbit moon={moonPos} />
         </>
       )}
-      <Trajectory mission={mission} helio={helio} />
-      <Probe sample={sample} />
+      <Trajectory mission={mission} helio={helio} well={drape} />
+      <Probe sample={sample} well={drape} />
       <CraftBeacon position={craftPos} />
-      <CameraRig sample={sample} mode={mode} offset={offset} />
+      <CameraRig sample={sample} mode={mode} offset={offset} well={well} />
       <OrbitControls
         ref={controlsRef}
         makeDefault
@@ -774,10 +880,12 @@ export function CislunarCanvas({
   mission,
   sample,
   mode,
+  well,
 }: {
   mission: CislunarMission;
   sample: CislunarSample;
   mode: CameraMode;
+  well: boolean;
 }) {
   return (
     <Canvas
@@ -786,7 +894,7 @@ export function CislunarCanvas({
       camera={{ position: [150, 120, 220], fov: 46, near: 0.1, far: 4000 }}
       style={{ width: "100%", height: "100%", background: "#07080c", touchAction: "none" }}
     >
-      <SceneBody mission={mission} sample={sample} mode={mode} />
+      <SceneBody mission={mission} sample={sample} mode={mode} well={well} />
     </Canvas>
   );
 }

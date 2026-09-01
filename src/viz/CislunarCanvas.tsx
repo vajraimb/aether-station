@@ -6,6 +6,7 @@ type MainProps = {
   mission: CislunarMission;
   sample: CislunarSample;
   mode: CameraMode;
+  well: boolean;
 };
 
 export function CislunarCanvas(props: MainProps) {

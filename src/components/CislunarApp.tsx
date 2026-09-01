@@ -210,6 +210,7 @@ export function CislunarApp() {
   const [warp, setWarp] = useState<number | "auto">("auto");
   const [t, setT] = useState(0);
   const [mode, setMode] = useState<CameraMode>("earth");
+  const [well, setWell] = useState(true);
   const prevPhase = useRef<Phase | null>(null);
 
   useEffect(() => {
@@ -291,7 +292,7 @@ export function CislunarApp() {
 
       <section className="relative min-h-0 flex-1 overflow-hidden">
         <div className="absolute inset-0 touch-none">
-          <CislunarCanvas mission={mission} sample={sample} mode={mode} />
+          <CislunarCanvas mission={mission} sample={sample} mode={mode} well={well} />
         </div>
 
         {briefing && (
@@ -303,8 +304,10 @@ export function CislunarApp() {
               <h2 className="mt-1 text-2xl font-semibold tracking-tight">Earth to Moon to Mars</h2>
               <p className="mt-3 text-sm leading-relaxed text-fg-muted">
                 LEO parking, lunar capture, one Moon revolution around Earth, then a
-                Hohmann transfer to Mars. The probe stays in low Mars orbit while Mars
-                completes one trip around the Sun. Drag to orbit, scroll to zoom.
+                Hohmann transfer to Mars. After TMI the Sun is shown as a curved
+                spacetime well — the probe follows a geodesic on that surface, which
+                is the orbit. The well is exaggerated (real solar rs ≈ 3 km). Drag to
+                orbit, scroll to zoom.
               </p>
               <ul className="mt-4 space-y-1.5 font-mono text-xs text-fg-muted">
                 <li>TLI Δv ≈ {mission.dvTli.toFixed(2)} km/s · TMI Δv ≈ {mission.dvTmi.toFixed(2)} km/s</li>
@@ -387,6 +390,9 @@ export function CislunarApp() {
                   {c.label}
                 </Btn>
               ))}
+              <Btn onClick={() => setWell((v) => !v)} active={well} title="Spacetime well">
+                Spacetime
+              </Btn>
               <span className="px-1 text-2xs uppercase tracking-[0.12em] text-fg-subtle">
                 drag · scroll to zoom
               </span>
