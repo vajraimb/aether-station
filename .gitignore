@@ -45,6 +45,7 @@ outputs/eval-knn-tail2.json
 outputs/*.csv
 outputs/eval-smoke.json
 outputs/ledger/*.sqlite
+outputs/inventory/*/
 
 # OS / editor
 .DS_Store

@@ -1,0 +1,57 @@
+{
+  "domain": "inventory",
+  "agent": "reorder-point",
+  "horizonDays": 30,
+  "allGates": 0,
+  "rows": [
+    {
+      "id": "steady",
+      "pass": false,
+      "fillRate": 0.5551020408163265,
+      "cash": 3756.8999999999996,
+      "stockoutDays": 24,
+      "violations": 0
+    },
+    {
+      "id": "demand-spike",
+      "pass": false,
+      "fillRate": 0.4519230769230769,
+      "cash": 3797.3500000000004,
+      "stockoutDays": 25,
+      "violations": 0
+    },
+    {
+      "id": "supplier-outage",
+      "pass": false,
+      "fillRate": 0.5428571428571428,
+      "cash": 3365.35,
+      "stockoutDays": 25,
+      "violations": 0
+    },
+    {
+      "id": "delay-anomaly",
+      "pass": false,
+      "fillRate": 0.4204081632653061,
+      "cash": 3805.35,
+      "stockoutDays": 25,
+      "violations": 0
+    },
+    {
+      "id": "forecast-bias",
+      "pass": false,
+      "fillRate": 0.889795918367347,
+      "cash": 3752.1999999999994,
+      "stockoutDays": 6,
+      "violations": 0
+    },
+    {
+      "id": "combined-stress",
+      "pass": false,
+      "fillRate": 0.45722713864306785,
+      "cash": 4292.2,
+      "stockoutDays": 20,
+      "violations": 0
+    }
+  ],
+  "note": "Baseline is expected to FAIL all-gates. This smoke checks the platform, not policy quality."
+}
