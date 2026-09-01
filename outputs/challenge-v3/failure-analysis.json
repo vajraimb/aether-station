@@ -1,0 +1,176 @@
+{
+  "artefact": "failure-analysis",
+  "branch": "control/challenge-v3-hybrid-robust",
+  "commit": "86ce40cb98acd32dd7c82fea2a7695e799a144a7",
+  "start_commit": "86ce40cb98acd32dd7c82fea2a7695e799a144a7",
+  "physics_baseline_sha": "bdfff5b4c62733d7156d2f9cdeeaa75661d6c9f4",
+  "immutable_file_sha256": {
+    "src/sim/math3d.ts": "6c131732fd5590930a58555fa16361bf2f7421eedeb47870c3f282754b9da158",
+    "src/sim/dynamics.ts": "f23b1ea3bbc170743df442105636866df848033522bd6ed6e92afca69b62ca11",
+    "src/sim/audit.ts": "96b445596c5175e94e29c2f877bcd7a7f255521a0936459f9f8780bf34e21549"
+  },
+  "immutable_diff_vs_start": "none",
+  "determinism": {
+    "fixed_seed": true,
+    "wall_clock_deadlines": false,
+    "note": "All optimizers use fixed iteration/expansion/population counts and a seeded RNG; no wall-clock cutoff is used anywhere in the planner (spec 13)."
+  },
+  "scope": "Action-space, horizon and optimization failure analysis required by specification section 7 when the truth-state Train-10 gate fails.",
+  "gate_outcome": {
+    "claim_type": "measured",
+    "attitude_pass_rate": 0.7,
+    "rate_pass_rate": 1,
+    "fuel_pass_rate": 1,
+    "all_gates_pass_rate": 0.7,
+    "required": {
+      "attitude": 0.9,
+      "rate": 0.9,
+      "fuel": 0.9,
+      "all_gates": 0.8
+    },
+    "passed": false
+  },
+  "failing_seeds": [
+    {
+      "seed": 800017,
+      "attitude_deg": 2.7439361964917572,
+      "angular_speed_rad_s": 0.0047275837999519316,
+      "remaining_fuel_kg": 3.8917355585530857,
+      "slosh_ratio": 0.001582541018710738,
+      "fault_thruster": 3,
+      "fault_time_s": 79.91050987737253,
+      "binding_gate": "attitude",
+      "margin_deg": 1.7439361964917572
+    },
+    {
+      "seed": 800051,
+      "attitude_deg": 1.0705463212973072,
+      "angular_speed_rad_s": 0.007275989764630892,
+      "remaining_fuel_kg": 3.438569140983037,
+      "slosh_ratio": 0.0003617041173433139,
+      "fault_thruster": 3,
+      "fault_time_s": 57.23702328745276,
+      "binding_gate": "attitude",
+      "margin_deg": 0.0705463212973072
+    },
+    {
+      "seed": 800085,
+      "attitude_deg": 1.546497420943615,
+      "angular_speed_rad_s": 0.0050699744540966905,
+      "remaining_fuel_kg": 3.812260555241446,
+      "slosh_ratio": 0.0035419417676244695,
+      "fault_thruster": 3,
+      "fault_time_s": 87.52405885607004,
+      "binding_gate": "attitude",
+      "margin_deg": 0.5464974209436151
+    }
+  ],
+  "diagnosis": [
+    {
+      "id": "attitude_only_binding_gate",
+      "claim_type": "measured",
+      "finding": "Every failure on Train-10 is an attitude failure. Rate, fuel, slosh, slider impact and quaternion-norm gates pass on 10 of 10 seeds. Worst remaining fuel is 3.27 kg against a 2.8 kg floor, so roughly 0.47 kg of unused control authority remains on the worst seed: the failures are not fuel-limited."
+    },
+    {
+      "id": "not_basic_control",
+      "claim_type": "measured",
+      "finding": "L1 with ideal continuous torque reaches 0.004-0.010 deg on the same 10 scenarios. The attitude requirement is therefore two to three orders of magnitude inside the reach of the plant, and the loss is created by discretisation and search."
+    },
+    {
+      "id": "terminal_timing_sensitivity",
+      "claim_type": "measured",
+      "finding": "Attitude error drifts as omega times elapsed time, so a plan must arrive at the target attitude exactly at t = 180 s. At the measured terminal rates of 3e-4 to 5e-3 rad/s, a 1 s timing error costs 0.02-0.29 deg. The 40 ms pulse quantum sets a floor on how finely arrival time can be shaped, and the 120 ms command delay shifts every correction. This is the dominant residual error source on the three failing seeds."
+    },
+    {
+      "id": "horizon_versus_budget",
+      "claim_type": "search_unreached",
+      "finding": "The planner replans 20-65 times per mission and expends 6.2k-23.4k full-fidelity rollouts. The failing seeds are the ones with the largest replan counts (65, 50 and 43), i.e. the ones where the search never settled on a committed capture. Larger node-expansion and population budgets were not explored to convergence inside this run. Whether the required sequences exist inside the given action space is therefore unresolved: no infeasibility is claimed."
+    },
+    {
+      "id": "deferral_pathology",
+      "claim_type": "measured",
+      "finding": "Scoring each candidate prefix with an analytically auto-completed terminal capture attached was implemented and measured. It is strictly worse: on Train-10 it produced 0 of 10 attitude passes with terminal attitudes of 5-173 deg. The mechanism is that the completion is free in the score but is never committed, so the optimizer defers all work to a tail plan that is re-solved and discarded at every epoch. The change was reverted and the flag `autoComplete` retained as a diagnostic default-off option."
+    },
+    {
+      "id": "coarse_coast_inside_schedule",
+      "claim_type": "measured",
+      "finding": "Coarsening the integrator step during idle stretches inside a schedule, rather than only after the schedule ends, gave a large speed-up and destroyed accuracy where it matters: the coast leg of a rest-to-rest capture. Train-10 attitude fell to 0 of 10 with terminal attitudes of 0.5-13 deg. Reverted."
+    },
+    {
+      "id": "terminal_rate_penalty",
+      "claim_type": "measured",
+      "finding": "Adding a terminal-rate term to the effective attitude cost (TAU_JITTER = 2.0 s of residual drift) regressed two seeds that had been inside the gate (800051 0.433 -> 3.73 deg, 800017 2.43 -> 7.46 deg). Reverted to 0."
+    },
+    {
+      "id": "configuration_variance",
+      "claim_type": "measured",
+      "finding": "Two planner configurations were each measured on the full Train-10 split. The richer rest-to-rest arrival grid without the shooting-polish stage passed 8 of 10 attitude (failing 800017 and 800119); the reduced grid with the polish stage passed 7 of 10 (failing 800017, 800051 and 800085). The union of seeds passed by at least one configuration is 9 of 10, and only 800017 fails under both. This is evidence that the required sequences are close to reachable and that the shortfall is a search and selection problem, not an action-space limit. It is not evidence that any single deterministic configuration reaches 90%."
+    },
+    {
+      "id": "persistent_hard_seed",
+      "claim_type": "measured",
+      "finding": "Seed 800017 fails under every configuration measured, best 2.43 deg. A reachability probe from its own t = 165 s truth state (attitude 12.479 deg, omega 2.789e-2 rad/s, fuel 3.990 kg, live nozzles 0,1,2,4,5) found a best achievable terminal attitude of 2.908 deg, so at that point the mission is already lost. The error is therefore committed upstream: between t = 100 s and t = 146 s the planner ranked an accidental free-drift fly-by of the target (predicted 1.00 deg, predicted rate 0.0211 rad/s) above a real capture, and only committed to braking too late."
+    }
+  ],
+  "action_space_assessment": {
+    "claim_type": "search_unreached",
+    "statement": "The action space specified (coast, all legal single nozzles, all legal nozzle pairs, durations 40/80/120/160/240/320 ms) is NOT shown to be infeasible for the terminal gates. The evidence points the other way: 9 of 10 Train-10 seeds were passed by some measured configuration within this action space, and the torque matrix retains rank 3 with condition number about 2.4 after a single failure. What has not been achieved is a single fixed, deterministic search configuration that reaches the required 90%.",
+    "explicitly_not_claimed": "physically infeasible - the specification forbids labelling a search shortfall as infeasibility, and no infeasibility certificate was computed"
+  },
+  "next_actions": [
+    "Replace the greedy per-epoch selection with an explicit commit-time decision: rank candidates by terminal-capture probability of the committed prefix alone, and forbid crediting free-drift fly-by attitudes that the plan does not actively brake into.",
+    "Raise branch-and-bound node expansions and CEM population until the per-epoch winner stops changing, and report the convergence curve rather than a fixed budget chosen by wall-clock affordability.",
+    "Add arrival-time refinement on the terminal capture at the 40 ms quantum, i.e. search the arrival tick explicitly instead of taking whichever rest-to-rest arrival the generator proposes.",
+    "Only after the truth-state gate passes, resume the estimation, active identification and observation-only stages."
+  ],
+  "configuration": {
+    "budget": {
+      "searchDt": 0.02,
+      "searchCoastDt": 0.4,
+      "refineDt": 0.005,
+      "refineCoastDt": 0.05,
+      "refineTopK": 16,
+      "maxProposalSegments": 140,
+      "bnbNodeExpansions": 8,
+      "bnbBeamWidth": 8,
+      "bnbMaxDepth": 4,
+      "bnbDurations": [
+        0.04,
+        0.16,
+        0.32
+      ],
+      "cemSlots": 6,
+      "cemPopulation": 24,
+      "cemGenerations": 4,
+      "cemElite": 5,
+      "seed": 1,
+      "optimizers": [
+        "proposals",
+        "bnb",
+        "cem"
+      ],
+      "ensembleTopK": 6,
+      "autoComplete": false,
+      "polishRounds": 2,
+      "polishSeeds": 3
+    },
+    "cost_weights": {
+      "onTime": 60,
+      "completion": 3,
+      "box": 4000,
+      "margin": 400,
+      "infeasible": 20000,
+      "hard": 10000000
+    },
+    "gates": {
+      "attitudeDeg": 1,
+      "omega": 0.008,
+      "impactSpeed": 0.25,
+      "sloshRatio": 0.08,
+      "fuelHard": 2.8,
+      "fuelFloor": 2.82,
+      "quatNormErr": 0.000001
+    }
+  },
+  "retained_failed_runs": "No failed run was deleted. Every seed measured on Train-10 is reported in truth-optimizer-train10.json with its full metric row, including the three failures."
+}

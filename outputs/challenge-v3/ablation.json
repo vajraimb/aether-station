@@ -1,0 +1,22 @@
+{
+  "artefact": "ablation",
+  "branch": "control/challenge-v3-hybrid-robust",
+  "commit": "86ce40cb98acd32dd7c82fea2a7695e799a144a7",
+  "start_commit": "86ce40cb98acd32dd7c82fea2a7695e799a144a7",
+  "physics_baseline_sha": "bdfff5b4c62733d7156d2f9cdeeaa75661d6c9f4",
+  "immutable_file_sha256": {
+    "src/sim/math3d.ts": "6c131732fd5590930a58555fa16361bf2f7421eedeb47870c3f282754b9da158",
+    "src/sim/dynamics.ts": "f23b1ea3bbc170743df442105636866df848033522bd6ed6e92afca69b62ca11",
+    "src/sim/audit.ts": "96b445596c5175e94e29c2f877bcd7a7f255521a0936459f9f8780bf34e21549"
+  },
+  "immutable_diff_vs_start": "none",
+  "determinism": {
+    "fixed_seed": true,
+    "wall_clock_deadlines": false,
+    "note": "All optimizers use fixed iteration/expansion/population counts and a seeded RNG; no wall-clock cutoff is used anywhere in the planner (spec 13)."
+  },
+  "status": "not_produced",
+  "claim_type": "search_unreached",
+  "reason": "Specification section 7 requires that observation-only development stop when the truth-state Train-10 gate fails. The gate failed (attitude 70% against a 90% requirement), so estimation, active identification, belief-rollout calibration and observation-only planning were not attempted and no numbers are reported for them. This is a halt mandated by the specification, not a claim that these stages are infeasible.",
+  "required_by": "specification section 14"
+}

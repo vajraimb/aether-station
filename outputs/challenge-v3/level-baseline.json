@@ -1,0 +1,148 @@
+{
+  "artefact": "level-baseline",
+  "branch": "control/challenge-v3-hybrid-robust",
+  "commit": "86ce40cb98acd32dd7c82fea2a7695e799a144a7",
+  "start_commit": "86ce40cb98acd32dd7c82fea2a7695e799a144a7",
+  "physics_baseline_sha": "bdfff5b4c62733d7156d2f9cdeeaa75661d6c9f4",
+  "immutable_file_sha256": {
+    "src/sim/math3d.ts": "6c131732fd5590930a58555fa16361bf2f7421eedeb47870c3f282754b9da158",
+    "src/sim/dynamics.ts": "f23b1ea3bbc170743df442105636866df848033522bd6ed6e92afca69b62ca11",
+    "src/sim/audit.ts": "96b445596c5175e94e29c2f877bcd7a7f255521a0936459f9f8780bf34e21549"
+  },
+  "immutable_diff_vs_start": "none",
+  "determinism": {
+    "fixed_seed": true,
+    "wall_clock_deadlines": false,
+    "note": "All optimizers use fixed iteration/expansion/population counts and a seeded RNG; no wall-clock cutoff is used anywhere in the planner (spec 13)."
+  },
+  "dataset": {
+    "set": "train",
+    "split": "train10",
+    "seeds": [
+      800000,
+      800017,
+      800034,
+      800051,
+      800068,
+      800085,
+      800102,
+      800119,
+      800136,
+      800153
+    ]
+  },
+  "levels": {
+    "L1": {
+      "claim_type": "measured",
+      "definition": "known parameters, ideal continuous three-axis body torque saturated at 5.8 N*m per axis, no fault, no slosh, no sensor noise, no command delay, no minimum pulse width",
+      "harness": "src/sim/challenge-v3/levels.ts runLevel1 - integrates the audited integrateWithCollision with the torque injected through u.tauThrO; the audited physics files are untouched",
+      "pass_rate": 1,
+      "per_seed": [
+        {
+          "level": "L1",
+          "seed": 800000,
+          "attitudeDeg": 0.005229714769128483,
+          "omega": 0.00013920776471854041,
+          "peakTorque": 10.045894683899487,
+          "passed": true
+        },
+        {
+          "level": "L1",
+          "seed": 800017,
+          "attitudeDeg": 0.005931050917513172,
+          "omega": 0.00006234572590414251,
+          "peakTorque": 10.045894683899487,
+          "passed": true
+        },
+        {
+          "level": "L1",
+          "seed": 800034,
+          "attitudeDeg": 0.010087587354700648,
+          "omega": 0.000172904760051356,
+          "peakTorque": 10.045894683899487,
+          "passed": true
+        },
+        {
+          "level": "L1",
+          "seed": 800051,
+          "attitudeDeg": 0.007872751743854156,
+          "omega": 0.00014773948310064735,
+          "peakTorque": 10.045894683899487,
+          "passed": true
+        },
+        {
+          "level": "L1",
+          "seed": 800068,
+          "attitudeDeg": 0.004035479069889382,
+          "omega": 0.000145803606396576,
+          "peakTorque": 10.045894683899487,
+          "passed": true
+        },
+        {
+          "level": "L1",
+          "seed": 800085,
+          "attitudeDeg": 0.003982317326860357,
+          "omega": 0.00009819820780145353,
+          "peakTorque": 10.045894683899487,
+          "passed": true
+        },
+        {
+          "level": "L1",
+          "seed": 800102,
+          "attitudeDeg": 0.010166540273290243,
+          "omega": 0.00008408494930639958,
+          "peakTorque": 10.045894683899487,
+          "passed": true
+        },
+        {
+          "level": "L1",
+          "seed": 800119,
+          "attitudeDeg": 0.004844493735935201,
+          "omega": 0.00010279869821615356,
+          "peakTorque": 10.045894683899487,
+          "passed": true
+        },
+        {
+          "level": "L1",
+          "seed": 800136,
+          "attitudeDeg": 0.009325851572210393,
+          "omega": 0.00017184632550285099,
+          "peakTorque": 10.045894683899487,
+          "passed": true
+        },
+        {
+          "level": "L1",
+          "seed": 800153,
+          "attitudeDeg": 0.006462019333004706,
+          "omega": 0.00008168387574503749,
+          "peakTorque": 10.045894683899487,
+          "passed": true
+        }
+      ],
+      "verdict": "PASS - the basic pointing problem is solved in this inertia and torque envelope, so a stage-1 failure cannot be attributed to basic control"
+    },
+    "L2": {
+      "claim_type": "measured",
+      "definition": "known parameters, real 40 ms pulse quantisation, 120 ms command delay, two-thruster concurrency, single thruster failure, fuel constraint, truth state readable",
+      "note": "The measured stage-1 run is L2 with the slosh and slider subsystems left active, i.e. strictly harder than the minimal L2 definition; it is the same run reported in truth-optimizer-train10.json.",
+      "pass_rate_attitude": 0.7,
+      "pass_rate_rate": 1,
+      "pass_rate_fuel": 1,
+      "pass_rate_all_gates": 0.7,
+      "verdict": "FAIL - the level that fails is the discrete-actuation level, with L1 passing at 100%. Per specification section 5 this failure MUST NOT be attributed to the estimator."
+    },
+    "L3": {
+      "status": "not_produced",
+      "claim_type": "search_unreached",
+      "reason": "Specification section 7 requires that observation-only development stop when the truth-state Train-10 gate fails. The gate failed (attitude 70% against a 90% requirement), so estimation, active identification, belief-rollout calibration and observation-only planning were not attempted and no numbers are reported for them. This is a halt mandated by the specification, not a claim that these stages are infeasible.",
+      "definition": "real thrusters, single fault, observation-only, eta_T unknown, slosh off or known"
+    },
+    "L4": {
+      "status": "not_produced",
+      "claim_type": "search_unreached",
+      "reason": "Specification section 7 requires that observation-only development stop when the truth-state Train-10 gate fails. The gate failed (attitude 70% against a 90% requirement), so estimation, active identification, belief-rollout calibration and observation-only planning were not attempted and no numbers are reported for them. This is a halt mandated by the specification, not a claim that these stages are infeasible.",
+      "definition": "full mission"
+    }
+  },
+  "localisation": "L1 passes 10/10 with terminal attitude 0.004-0.010 deg and terminal rate below 2e-4 rad/s. The same scenarios fail at L2. The loss is therefore created entirely by the discrete action space (40 ms quantum, two-thruster concurrency, 120 ms delay) and by the finite search over action sequences, not by control-theoretic authority, not by the estimator, and not by fuel."
+}
