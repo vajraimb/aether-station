@@ -1,3 +1,4 @@
+import { INVENTORY_LEDGER } from "../../../domains/inventory/catalog";
 import { LEDGER } from "./catalog";
 import { ExperimentStore, SCHEMA_VERSION } from "./store";
 import type { RunRecord } from "./schema";
@@ -54,6 +55,13 @@ export function runStoreTests(): T[] {
   check("store_parent_required", threw, "missing parent throws", out);
   check("store_rollback_no_orphan", store.get("orphan-should-rollback") === undefined, "no orphan row", out);
   check("store_rollback_count", store.count() === n1, `n=${store.count()}`, out);
+  const n2 = store.count();
+  store.ingestAll(INVENTORY_LEDGER);
+  check("store_inventory_domain", store.get("inventory-reorder-smoke")?.domain === "inventory", String(store.get("inventory-reorder-smoke")?.domain), out);
+  check("store_inventory_parent", store.lineage("inventory-reorder-smoke").includes("aether-benchmark-v0.1.0"), "cross-domain parent", out);
+  check("store_inventory_count", store.count() === n2 + 1, `n=${store.count()}`, out);
+  store.ingestAll(INVENTORY_LEDGER);
+  check("store_inventory_idempotent", store.count() === n2 + 1, `n=${store.count()}`, out);
   store.close();
   return out;
 }

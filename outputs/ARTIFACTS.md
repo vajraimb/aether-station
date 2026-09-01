@@ -28,5 +28,6 @@ Do not treat study JSON as a flight controller.
 | `outputs/release/checksums.sha256` | `npm run release:manifest` |
 | `outputs/ledger/index.json` | `npm run ledger:stamp` |
 | `outputs/ledger/experiments.sqlite` | `npm run ledger:ingest` (gitignored) |
+| `outputs/inventory/smoke.json` | `npm run inventory:smoke` |
 
 Do not commit `outputs/runs/`, per-seed CSV, or multi-megabyte JSON traces.

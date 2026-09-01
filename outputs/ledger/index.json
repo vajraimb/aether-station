@@ -1,9 +1,12 @@
 {
-  "domain": "aether",
+  "domains": [
+    "aether",
+    "inventory"
+  ],
   "environment_version": "aether-station@0.1.0-benchmark",
   "physics_sha": "bdfff5b4c62733d7156d2f9cdeeaa75661d6c9f4",
-  "generatedAt": "2026-09-01T03:29:41.095Z",
-  "count": 9,
+  "generatedAt": "2026-09-01T03:54:54.641Z",
+  "count": 10,
   "runs": [
     {
       "run_id": "aether-physics-conservation",
@@ -355,6 +358,44 @@
           "type": "measured",
           "statement": "Benchmark v0.1.0 published. Task solved NO. Infrastructure PASS.",
           "evidence_artifact": "docs/release/benchmark-card.md"
+        }
+      ]
+    },
+    {
+      "run_id": "inventory-reorder-smoke",
+      "kind": "benchmark_run",
+      "status": "failed",
+      "domain": "inventory",
+      "environment_version": "aether-station@0.1.0-benchmark",
+      "agent_version": "reorder-point",
+      "code_sha": "domain/inventory-validation",
+      "physics_sha": "bdfff5b4c62733d7156d2f9cdeeaa75661d6c9f4",
+      "agent_sha": "reorder-point",
+      "scenario_hash": "steady+spike+outage+delay+bias+combo",
+      "config_hash": "horizon-30",
+      "seed_set": [
+        1
+      ],
+      "parent_run_id": "aether-benchmark-v0.1.0",
+      "failure_class": "online_gate_fail",
+      "metrics": {
+        "allGates": 0,
+        "fillSteady": 0.555,
+        "fillSpike": 0.452,
+        "fillOutage": 0.543,
+        "fillDelay": 0.42,
+        "fillBias": 0.89,
+        "fillCombo": 0.457
+      },
+      "artifacts": [
+        "outputs/inventory/smoke.json"
+      ],
+      "reproduction_command": "npm run inventory:smoke",
+      "claims": [
+        {
+          "type": "measured",
+          "statement": "Reorder-point inventory smoke 0/6 all-gates. Platform ran; policy is not the test.",
+          "evidence_artifact": "outputs/inventory/smoke.json"
         }
       ]
     }
