@@ -5,7 +5,8 @@ Three reusable surfaces. Physics kernel stays where it is; these files only re-e
 | Layer | Module | Contains | Must not contain |
 |---|---|---|---|
 | **SimCore** | [`src/sim/core.ts`](../src/sim/core.ts) | Frozen plant: public config, observation keys, 3-D math, mass/H/slosh queries, actuator limits | Controllers, Simulator, hidden scenario |
-| **AgentArena** | [`src/sim/arena.ts`](../src/sim/arena.ts) | `FlightController.step(Observation)`, factory (`baseline` / `discrete-pulse-v2`), train/hidden seeds, file scorer, published gates | Truth, `PrivateScenario`, research planners (kNN, macros, null-space, robust-terminal) |
+| **AgentArena** | [`packages/agent-arena`](../packages/agent-arena/src/index.ts) | Generic `Agent` / `Environment` / file `ArtifactScorer` / episode runner | Domain physics, Simulator, quaternions, slosh |
+| **AETHER adapter** | [`src/sim/adapters/station.ts`](../src/sim/adapters/station.ts) | `SpaceStationAgent`, `SpaceStationDriver`, `SpaceStationScorer` | Must not live inside `packages/agent-arena` |
 | **Ledger** | [`outputs/ARTIFACTS.md`](../outputs/ARTIFACTS.md) | Commands that regenerate aggregate JSON; physics SHA | Per-seed CSV, `outputs/runs/` |
 
 ## Agent protocol
