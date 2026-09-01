@@ -33,6 +33,7 @@
   "include": [
     "src",
     "server",
-    "packages/agent-arena"
+    "packages/agent-arena",
+    "domains/inventory"
   ]
 }
