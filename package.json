@@ -23,6 +23,7 @@
     "sim": "npx tsx src/sim/cli/run-sim.ts",
     "score": "npx tsx src/sim/cli/run-score.ts",
     "test:physics": "npx tsx src/sim/cli/run-physics.ts",
+    "test:arena": "npx tsx src/sim/cli/run-arena.ts",
     "eval": "npx tsx src/sim/cli/run-eval.ts",
     "eval:smoke": "npx tsx src/sim/cli/run-eval.ts --controller baseline --set smoke",
     "release:manifest": "npx tsx src/sim/cli/run-release.ts",

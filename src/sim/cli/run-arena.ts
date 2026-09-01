@@ -1,0 +1,9 @@
+#!/usr/bin/env npx tsx
+/** AgentArena leak + domain adapter tests. No 180s physics. */
+import { runStationAdapterTests } from "../adapters/station.test.ts";
+
+const rows = [...runStationAdapterTests()];
+for (const r of rows) console.log(`${r.pass ? "PASS" : "FAIL"}  ${r.name}  ${r.detail}`);
+const fail = rows.filter((r) => !r.pass).length;
+console.log(`\n${rows.length - fail}/${rows.length} passed`);
+process.exit(fail ? 1 : 0);

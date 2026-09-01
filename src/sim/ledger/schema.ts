@@ -23,7 +23,7 @@ export interface RunRecord {
   readonly run_id: string;
   readonly kind: RunKind;
   readonly status: RunStatus;
-  readonly domain: "aether";
+  readonly domain: string;
   readonly environment_version: string;
   readonly agent_version: string;
   readonly code_sha: string;
