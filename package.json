@@ -27,6 +27,7 @@
     "eval:smoke": "npx tsx src/sim/cli/run-eval.ts --controller baseline --set smoke",
     "release:manifest": "npx tsx src/sim/cli/run-release.ts",
     "ledger:stamp": "npx tsx src/sim/cli/run-ledger.ts",
+    "ledger:ingest": "node --experimental-sqlite --import tsx src/sim/cli/run-ledger-ingest.ts",
     "eval:rollout-error": "npx tsx src/sim/cli/run-rollout-error.ts",
     "eval:traces": "npx tsx src/sim/cli/run-failure-traces.ts",
     "eval:capture-reachability": "npx tsx src/sim/cli/run-capture-reachability.ts",

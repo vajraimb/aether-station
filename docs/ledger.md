@@ -24,4 +24,10 @@ writes `outputs/ledger/index.json` plus one file per `run_id`.
 
 A search miss is **not** physical unreachability.
 
-Lineage is `parent_run_id`. SQLite ingest is a later step; this JSON catalog is the source of truth for AETHER v0.1.0.
+Lineage is `parent_run_id`. JSON catalog is the source of truth. SQLite ingest:
+
+```bash
+npm run ledger:ingest
+```
+
+writes `outputs/ledger/experiments.sqlite` (gitignored). Same schema fields (`domain`, `environment_version`, `agent_version`, `scenario_hash`, `artifact_manifest`, `claim_type`, `failure_class`) are intended for later inventory / Bid Pitwall runs. Do not create a second database.
