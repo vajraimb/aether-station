@@ -3,7 +3,7 @@ import { Link } from "@tanstack/react-router";
 import { Pause, Play, Repeat, RotateCcw, SkipForward } from "lucide-react";
 import { PHASE_LABEL, isLunarPhase, type Phase } from "../../domains/cislunar/constants";
 import { buildCislunarMission, sampleAt } from "../../domains/cislunar/trajectory";
-import { CislunarCanvas, CraftInset } from "@/viz/CislunarCanvas";
+import { CislunarCanvas } from "@/viz/CislunarCanvas";
 import type { CameraMode } from "@/viz/cislunar-types";
 
 const AUTO_WARP: Record<Phase, number> = {
@@ -165,17 +165,6 @@ export function CislunarApp() {
       <section className="relative min-h-0 flex-1">
         <div className="absolute inset-0 touch-none">
           <CislunarCanvas mission={mission} sample={sample} mode={mode} />
-        </div>
-
-        <div className="pointer-events-none absolute right-3 top-3 z-10 w-40 sm:w-52">
-          <div className="pointer-events-auto overflow-hidden rounded-xl bg-bg-elevated/90 shadow-[var(--shadow-border)] backdrop-blur-sm">
-            <div className="h-40 sm:h-52">
-              <CraftInset sample={sample} />
-            </div>
-            <div className="px-2 py-1.5 text-center text-2xs uppercase tracking-[0.14em] text-fg-subtle">
-              Attitude · drag / pinch
-            </div>
-          </div>
         </div>
 
         {briefing && (

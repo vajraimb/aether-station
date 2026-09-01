@@ -620,22 +620,3 @@ export function CislunarCanvas({
   );
 }
 
-export function CraftInsetCanvas({ sample }: { sample: CislunarSample }) {
-  return (
-    <Canvas
-      dpr={[1, 2]}
-      gl={{ antialias: true, alpha: false, preserveDrawingBuffer: true, powerPreference: "high-performance" }}
-      camera={{ position: [2.8, 1.7, 3.4], fov: 42, near: 0.1, far: 40 }}
-      style={{ width: "100%", height: "100%", background: "#07080c", touchAction: "none" }}
-    >
-      <color attach="background" args={["#07080c"]} />
-      <ambientLight intensity={0.55} />
-      <hemisphereLight args={["#cfd6e2", "#1a1d24", 0.7]} />
-      <directionalLight position={[6, 8, 5]} intensity={1.8} />
-      <directionalLight position={[-5, -3, -6]} intensity={0.45} />
-      <gridHelper args={[10, 10, "#1c2230", "#12161f"]} />
-      <CraftModel sample={sample} scale={1.35} />
-      <OrbitControls enableDamping dampingFactor={0.08} minDistance={2.2} maxDistance={12} />
-    </Canvas>
-  );
-}
