@@ -1,18 +1,32 @@
-# Research phase complete
+# AETHER Research Benchmark v1
 
 Physics baseline: `bdfff5b4c62733d7156d2f9cdeeaa75661d6c9f4`
 
 Aether Station is a **post-fault, partially observed, discrete-pulse, sloshing attitude-recovery benchmark**. Online control did not pass the published gates. This document freezes that result. It is not a controller.
 
 ```text
+AETHER Research Benchmark v1
+
 PHYSICS: PASS
 BENCHMARK INFRASTRUCTURE: PASS
+TRUTH/OBSERVATION ISOLATION: PASS
+REPRODUCIBILITY: PASS
 CONTROL BASELINES: FAIL
 ROBUST TERMINAL CANCELLATION: FAIL
 READY TO WIRE: NO
-OVERALL: FAIL
+OVERALL CONTROL TASK: FAIL
 RESEARCH PHASE: COMPLETE
 ```
+
+Immutable tags (annotated) — prefer these over live branch tips:
+
+| Tag | SHA | Branch archived |
+|---|---|---|
+| `archive/control-v2-final` | `0d871b4` | `control/discrete-pulse-planner-v2` |
+| `archive/action-macro-belief-audit` | `7c3eca0` | `control/action-macro-and-belief-audit` |
+| `archive/wrench-nullspace-study` | `38d2c74` | `research/wrench-nullspace-and-long-sequence` |
+| `archive/robust-terminal-study` | `3b6b5da` | `research/robust-terminal-cancellation` |
+| `benchmark/research-phase-complete-v1` | `4b5d7a6` | `benchmark/research-phase-complete` |
 
 ## Frozen algorithm branches
 
@@ -25,7 +39,7 @@ Do not accumulate new planners on these. They are the research archive.
 | `research/wrench-nullspace-and-long-sequence` | `38d2c74` | Rank-3 after one fail; short-pulse ρ median 2.83; 16-seg cancel is terminal-only. Not wired. |
 | `research/robust-terminal-cancellation` | `3b6b5da` | 42 low-rate states, estimator 2σ η_T. Nominal capture **6/42 (14%)**, near-close only. Not wired. |
 
-This branch (`benchmark/research-phase-complete`) only names the layers and the freeze. Physics tests **270/270**. It does not retune, wire, or run train-50 / hidden.
+This branch (`benchmark/research-phase-complete`) only names the layers and the freeze. Physics tests **270/270**. It does not retune, wire, or run train-50 / hidden. v1 is tag `benchmark/research-phase-complete-v1` @ `4b5d7a6`; later commits on this branch are ledger only.
 
 ## Lines that are closed
 

@@ -5,7 +5,8 @@ are local or release artifacts, not review surface.
 
 Physics baseline: `bdfff5b4c62733d7156d2f9cdeeaa75661d6c9f4`
 
-Research phase: **COMPLETE**. See `docs/research-phase.md` and `docs/benchmark.md`.
+Research phase: **COMPLETE** (AETHER Research Benchmark v1). See `docs/research-phase.md` and `docs/benchmark.md`.
+Tag: `benchmark/research-phase-complete-v1` @ `4b5d7a6`.
 Do not treat study JSON as a flight controller.
 
 | Artifact | Generate |
