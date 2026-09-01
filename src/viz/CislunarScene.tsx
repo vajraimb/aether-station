@@ -28,6 +28,14 @@ const VIS_EARTH_R = 36;
 const VIS_MOON_R = 11;
 const VIS_LEO_R = 43;
 const VIS_LLO_R = 14.4;
+const SIDEREAL_DAY = 86164.0905;
+const SIDEREAL_YEAR = 365.256363 * 86400;
+const OBLIQUITY = (23.44 * Math.PI) / 180;
+
+function sunDir(t: number): THREE.Vector3 {
+  const lam = 0.62 + (t / SIDEREAL_YEAR) * Math.PI * 2;
+  return new THREE.Vector3(Math.cos(lam), 0, Math.sin(lam));
+}
 
 function vec3(p: readonly [number, number, number]): THREE.Vector3 {
   return new THREE.Vector3(p[0], p[1], p[2]);
@@ -122,26 +130,19 @@ function Atmosphere({ radius }: { radius: number }) {
   );
 }
 
-function Earth() {
+function Earth({ t }: { t: number }) {
   const day = useOptionalTexture("/textures/earth-day.jpg", true);
   const night = useOptionalTexture("/textures/earth-night.png", true);
   const clouds = useOptionalTexture("/textures/earth-clouds.png", false);
   const spec = useOptionalTexture("/textures/earth-specular.jpg", false);
   const normal = useOptionalTexture("/textures/earth-normal.jpg", false);
   const fallback = useMemo(() => makeEarthTexture(), []);
-  const globe = useRef<THREE.Group>(null);
-  const cloudRef = useRef<THREE.Mesh>(null);
   const r = VIS_EARTH_R;
-
-  useFrame((_, d) => {
-    const dt = Math.min(d, 0.1);
-    if (globe.current) globe.current.rotation.y += dt * 0.018;
-    if (cloudRef.current) cloudRef.current.rotation.y += dt * 0.026;
-  });
+  const spin = (t / SIDEREAL_DAY) * Math.PI * 2;
 
   return (
-    <group>
-      <group ref={globe}>
+    <group rotation={[0, 0, OBLIQUITY]}>
+      <group rotation={[0, spin, 0]}>
         <mesh>
           <sphereGeometry args={[r, 128, 96]} />
           <meshStandardMaterial
@@ -171,7 +172,7 @@ function Earth() {
           />
         </mesh>
         {clouds && (
-          <mesh ref={cloudRef} scale={1.008}>
+          <mesh rotation={[0, spin * 0.04, 0]} scale={1.008}>
             <sphereGeometry args={[r, 96, 64]} />
             <meshBasicMaterial
               map={clouds}
@@ -249,27 +250,57 @@ function CraftBeacon({ position }: { position: THREE.Vector3 }) {
 }
 
 function attitudeOf(sample: CislunarSample): THREE.Quaternion {
-  const r = vec3(sample.r);
+  const burning = sample.phase === "tli" || sample.phase === "loi";
   const v = vec3(sample.v);
-  const primary =
-    isLunarPhase(sample.phase) ? vec3(sample.moon) : ORIGIN.clone();
-  const radial = r.clone().sub(primary);
-  if (radial.lengthSq() < 1e-10) radial.set(1, 0, 0);
-  else radial.normalize();
-  const prograde = v.clone();
-  if (prograde.lengthSq() < 1e-10) prograde.set(0, 0, 1);
-  else prograde.normalize();
-  const normal = new THREE.Vector3().crossVectors(radial, prograde);
-  if (normal.lengthSq() < 1e-10) normal.set(0, 1, 0);
-  else normal.normalize();
-  const x = radial;
-  const y = normal;
-  const z = new THREE.Vector3().crossVectors(x, y).normalize();
-  const m = new THREE.Matrix4().makeBasis(x, y, z);
+  if (v.lengthSq() < 1e-10) v.set(0, 0, 1);
+  else v.normalize();
+  const m = new THREE.Matrix4();
+  if (burning) {
+    const r = vec3(sample.r);
+    const primary = isLunarPhase(sample.phase) ? vec3(sample.moon) : ORIGIN.clone();
+    const radial = r.sub(primary);
+    if (radial.lengthSq() < 1e-10) radial.set(1, 0, 0);
+    else radial.normalize();
+    const z = v;
+    const y = new THREE.Vector3().crossVectors(radial, z);
+    if (y.lengthSq() < 1e-10) y.set(0, 1, 0);
+    else y.normalize();
+    const x = new THREE.Vector3().crossVectors(y, z).normalize();
+    m.makeBasis(x, y, z);
+  } else {
+    const x = sunDir(sample.t);
+    const up = new THREE.Vector3(0, 1, 0);
+    const z = new THREE.Vector3().crossVectors(x, up);
+    if (z.lengthSq() < 1e-10) z.set(0, 0, 1);
+    else z.normalize();
+    const y = new THREE.Vector3().crossVectors(z, x).normalize();
+    m.makeBasis(x, y, z);
+  }
   return new THREE.Quaternion().setFromRotationMatrix(m);
 }
 
-/** High-detail CSM-style probe. +Z is prograde, engine faces −Z. */
+function Sun({ t }: { t: number }) {
+  const dir = sunDir(t);
+  const pos = dir.clone().multiplyScalar(420);
+  const fill = dir.clone().multiplyScalar(-80);
+  return (
+    <>
+      <ambientLight intensity={0.05} />
+      <hemisphereLight args={["#b7c8de", "#0a0908", 0.12]} />
+      <directionalLight position={pos} intensity={3.4} color="#fff1c8" />
+      <directionalLight position={fill} intensity={0.07} color="#6a7fa0" />
+      <mesh position={pos}>
+        <sphereGeometry args={[5.5, 16, 12]} />
+        <meshBasicMaterial color="#fff6d0" />
+      </mesh>
+      <sprite position={pos} scale={[28, 28, 1]}>
+        <spriteMaterial color="#ffe29a" transparent opacity={0.55} depthWrite={false} blending={THREE.AdditiveBlending} />
+      </sprite>
+    </>
+  );
+}
+
+/** CSM-style probe. Cruise: solar arrays (+X) face the sun. Burns: +Z prograde. */
 export function CraftModel({
   sample,
   showAxes = true,
@@ -531,13 +562,10 @@ function SceneBody({
   return (
     <>
       <color attach="background" args={["#07080c"]} />
-      <ambientLight intensity={0.22} />
-      <hemisphereLight args={["#c5d6ea", "#1a1610", 0.42]} />
-      <directionalLight position={[420, 180, 90]} intensity={2.8} color="#fff4e0" />
-      <directionalLight position={[-80, 40, -120]} intensity={0.08} color="#8aa4c8" />
+      <Sun t={sample.t} />
       <Stars />
       <gridHelper args={[720, 18, "#1c2230", "#12161f"]} />
-      <Earth />
+      <Earth t={sample.t} />
       <Moon pos={moonPos} />
       <MoonOrbit />
       <LunarOrbit moon={moonPos} />
