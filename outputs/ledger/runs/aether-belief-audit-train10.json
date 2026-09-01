@@ -1,0 +1,41 @@
+{
+  "run_id": "aether-belief-audit-train10",
+  "kind": "research_study",
+  "status": "archived",
+  "domain": "aether",
+  "environment_version": "aether-station@0.1.0-benchmark",
+  "agent_version": "discrete-pulse-v2",
+  "code_sha": "99f0901bad7b3d7da0ecb4d8a14ba5c0c14521dc",
+  "physics_sha": "bdfff5b4c62733d7156d2f9cdeeaa75661d6c9f4",
+  "agent_sha": "archive/action-macro-belief-audit",
+  "scenario_hash": "b6bf0078ff6ad3de",
+  "config_hash": null,
+  "seed_set": [
+    800000,
+    800017,
+    800034,
+    800051,
+    800068,
+    800085,
+    800102,
+    800119,
+    800136,
+    800153
+  ],
+  "parent_run_id": "aether-knn-value-train10",
+  "failure_class": null,
+  "metrics": {
+    "wiredToController": false
+  },
+  "artifacts": [
+    "outputs/belief-truth-audit-train10.json"
+  ],
+  "reproduction_command": "npm run eval:belief-audit",
+  "claims": [
+    {
+      "type": "measured",
+      "statement": "Estimator q/ω error is not the attitude-gate failure.",
+      "evidence_artifact": "outputs/belief-truth-audit-train10.json"
+    }
+  ]
+}

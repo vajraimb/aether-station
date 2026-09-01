@@ -22,6 +22,7 @@ import { runDiscreteActionTests } from "../control/discrete-actions.test.ts";
 import { runControllerProtocolTests } from "../control/interface.test.ts";
 import { runControlV2Tests } from "../control/control-v2.test.ts";
 import { runBenchmarkContractTests } from "../benchmark.test.ts";
+import { runLedgerTests } from "../ledger/catalog.test.ts";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const simDir = join(here, "..");
@@ -59,6 +60,11 @@ for (const r of runControlV2Tests()) {
 }
 
 for (const r of runBenchmarkContractTests()) {
+  extra.push(r);
+  console.log(`${r.pass ? "PASS" : "FAIL"}  ${r.name}  ${r.detail}`);
+}
+
+for (const r of runLedgerTests()) {
   extra.push(r);
   console.log(`${r.pass ? "PASS" : "FAIL"}  ${r.name}  ${r.detail}`);
 }

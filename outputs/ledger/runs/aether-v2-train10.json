@@ -1,0 +1,46 @@
+{
+  "run_id": "aether-v2-train10",
+  "kind": "benchmark_run",
+  "status": "failed",
+  "domain": "aether",
+  "environment_version": "aether-station@0.1.0-benchmark",
+  "agent_version": "discrete-pulse-v2",
+  "code_sha": "5a3bb2ba74054fe598b889ee3c0275658d3ed9c1",
+  "physics_sha": "bdfff5b4c62733d7156d2f9cdeeaa75661d6c9f4",
+  "agent_sha": "5a3bb2ba74054fe598b889ee3c0275658d3ed9c1",
+  "scenario_hash": "b6bf0078ff6ad3de",
+  "config_hash": "discrete-pulse-v2/beam28",
+  "seed_set": [
+    800000,
+    800017,
+    800034,
+    800051,
+    800068,
+    800085,
+    800102,
+    800119,
+    800136,
+    800153
+  ],
+  "parent_run_id": "aether-baseline-train10",
+  "failure_class": "online_gate_fail",
+  "metrics": {
+    "allGates": 0,
+    "attitude": 0,
+    "rate": 0.1,
+    "fuel": 0.9,
+    "param": 0.2,
+    "fdir": 1
+  },
+  "artifacts": [
+    "outputs/eval-v2-train10.json"
+  ],
+  "reproduction_command": "npm run eval -- --controller discrete-pulse-v2 --set train --count 10",
+  "claims": [
+    {
+      "type": "measured",
+      "statement": "discrete-pulse-v2 train-10 all-gates 0/10.",
+      "evidence_artifact": "outputs/eval-v2-train10.json"
+    }
+  ]
+}

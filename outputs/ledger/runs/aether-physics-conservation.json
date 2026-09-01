@@ -1,0 +1,31 @@
+{
+  "run_id": "aether-physics-conservation",
+  "kind": "physics_audit",
+  "status": "passed",
+  "domain": "aether",
+  "environment_version": "aether-station@0.1.0-benchmark",
+  "agent_version": "none",
+  "code_sha": "bdfff5b4c62733d7156d2f9cdeeaa75661d6c9f4",
+  "physics_sha": "bdfff5b4c62733d7156d2f9cdeeaa75661d6c9f4",
+  "agent_sha": null,
+  "scenario_hash": null,
+  "config_hash": null,
+  "seed_set": null,
+  "parent_run_id": null,
+  "failure_class": null,
+  "metrics": {
+    "physics": "PASS"
+  },
+  "artifacts": [
+    "outputs/conservation.json",
+    "outputs/reachability.json"
+  ],
+  "reproduction_command": "npm run test:physics -- --full",
+  "claims": [
+    {
+      "type": "measured",
+      "statement": "math3d/dynamics/audit match bdfff5b. Open-loop H/E conservation holds.",
+      "evidence_artifact": "outputs/conservation.json"
+    }
+  ]
+}

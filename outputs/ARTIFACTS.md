@@ -26,5 +26,6 @@ Do not treat study JSON as a flight controller.
 | `outputs/robust-terminal-study.json` | `npm run eval:robust-terminal` |
 | `outputs/release/release-manifest.json` | `npm run release:manifest` |
 | `outputs/release/checksums.sha256` | `npm run release:manifest` |
+| `outputs/ledger/index.json` | `npm run ledger:stamp` |
 
 Do not commit `outputs/runs/`, per-seed CSV, or multi-megabyte JSON traces.

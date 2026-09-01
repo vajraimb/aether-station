@@ -1,0 +1,36 @@
+{
+  "run_id": "aether-wrench-nullspace",
+  "kind": "research_study",
+  "status": "archived",
+  "domain": "aether",
+  "environment_version": "aether-station@0.1.0-benchmark",
+  "agent_version": "offline-nullspace",
+  "code_sha": "65d6992a47dba8c0acfa5b941151373ce04729b9",
+  "physics_sha": "bdfff5b4c62733d7156d2f9cdeeaa75661d6c9f4",
+  "agent_sha": "archive/wrench-nullspace-study",
+  "scenario_hash": null,
+  "config_hash": "8-16-seg",
+  "seed_set": null,
+  "parent_run_id": "aether-action-macros",
+  "failure_class": "search_unreached_under_budget",
+  "metrics": {
+    "readyToWire": false,
+    "rhoMedian": 2.83
+  },
+  "artifacts": [
+    "outputs/wrench-nullspace-study.json"
+  ],
+  "reproduction_command": "npm run eval:wrench-nullspace",
+  "claims": [
+    {
+      "type": "measured",
+      "statement": "Wrench remains rank-3 after one jet fail. Short-pulse ρ median 2.83.",
+      "evidence_artifact": "outputs/wrench-nullspace-study.json"
+    },
+    {
+      "type": "search_unreached",
+      "statement": "16-segment cancel is terminal-only under budget. Not proven unreachable.",
+      "evidence_artifact": "outputs/wrench-nullspace-study.json"
+    }
+  ]
+}

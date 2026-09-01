@@ -1,0 +1,46 @@
+{
+  "run_id": "aether-baseline-train10",
+  "kind": "benchmark_run",
+  "status": "failed",
+  "domain": "aether",
+  "environment_version": "aether-station@0.1.0-benchmark",
+  "agent_version": "baseline",
+  "code_sha": "f39a9ed67b4b630b3a16e3d03c7dff2b70f0a8ba",
+  "physics_sha": "bdfff5b4c62733d7156d2f9cdeeaa75661d6c9f4",
+  "agent_sha": "f39a9ed67b4b630b3a16e3d03c7dff2b70f0a8ba",
+  "scenario_hash": "b6bf0078ff6ad3de",
+  "config_hash": "baseline",
+  "seed_set": [
+    800000,
+    800017,
+    800034,
+    800051,
+    800068,
+    800085,
+    800102,
+    800119,
+    800136,
+    800153
+  ],
+  "parent_run_id": "aether-physics-conservation",
+  "failure_class": "online_gate_fail",
+  "metrics": {
+    "allGates": 0,
+    "attitude": 0.1,
+    "rate": 0.8,
+    "fuel": 1,
+    "param": 0.3,
+    "fdir": 1
+  },
+  "artifacts": [
+    "outputs/eval-baseline-train10.json"
+  ],
+  "reproduction_command": "npm run eval -- --controller baseline --set train --count 10",
+  "claims": [
+    {
+      "type": "measured",
+      "statement": "Baseline train-10 all-gates 0/10 (att 1/10).",
+      "evidence_artifact": "outputs/eval-baseline-train10.json"
+    }
+  ]
+}

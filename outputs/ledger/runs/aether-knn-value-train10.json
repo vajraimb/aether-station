@@ -1,0 +1,52 @@
+{
+  "run_id": "aether-knn-value-train10",
+  "kind": "benchmark_run",
+  "status": "stopped",
+  "domain": "aether",
+  "environment_version": "aether-station@0.1.0-benchmark",
+  "agent_version": "discrete-pulse-v2-knn",
+  "code_sha": "c0d80f81bab63d1195d18cd5632cf6c4daf1c9d1",
+  "physics_sha": "bdfff5b4c62733d7156d2f9cdeeaa75661d6c9f4",
+  "agent_sha": "archive/control-v2-final",
+  "scenario_hash": "b6bf0078ff6ad3de",
+  "config_hash": "knn-value",
+  "seed_set": [
+    800000,
+    800017,
+    800034,
+    800051,
+    800068,
+    800085,
+    800102,
+    800119,
+    800136,
+    800153
+  ],
+  "parent_run_id": "aether-v2-train10",
+  "failure_class": "ood_value_heuristic",
+  "metrics": {
+    "allGates": 0,
+    "attitude": 0,
+    "rate": 0.3,
+    "fuel": 1,
+    "param": 0.2,
+    "fdir": 1
+  },
+  "artifacts": [
+    "outputs/eval-v2-knn-train10.json",
+    "outputs/eval-ablation-train10.json"
+  ],
+  "reproduction_command": "npm run eval:ablation-train10",
+  "claims": [
+    {
+      "type": "measured",
+      "statement": "kNN-value train-10 all-gates 0/10. Line STOPPED.",
+      "evidence_artifact": "outputs/eval-v2-knn-train10.json"
+    },
+    {
+      "type": "deprecated",
+      "statement": "Do not resume kNN-value as a capture planner.",
+      "evidence_artifact": "docs/control-v2-findings.md"
+    }
+  ]
+}

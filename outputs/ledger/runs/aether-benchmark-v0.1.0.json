@@ -1,0 +1,35 @@
+{
+  "run_id": "aether-benchmark-v0.1.0",
+  "kind": "benchmark_release",
+  "status": "passed",
+  "domain": "aether",
+  "environment_version": "aether-station@0.1.0-benchmark",
+  "agent_version": "baseline",
+  "code_sha": "v0.1.0-benchmark",
+  "physics_sha": "bdfff5b4c62733d7156d2f9cdeeaa75661d6c9f4",
+  "agent_sha": "baseline",
+  "scenario_hash": "b6bf0078ff6ad3de",
+  "config_hash": "release",
+  "seed_set": [
+    800000,
+    800017
+  ],
+  "parent_run_id": "aether-physics-conservation",
+  "failure_class": null,
+  "metrics": {
+    "taskSolved": "NO",
+    "researchBenchmarkReady": "YES"
+  },
+  "artifacts": [
+    "outputs/release/release-manifest.json",
+    "docs/release/benchmark-card.md"
+  ],
+  "reproduction_command": "npm run eval -- --controller baseline --set smoke && npm run release:manifest",
+  "claims": [
+    {
+      "type": "measured",
+      "statement": "Benchmark v0.1.0 published. Task solved NO. Infrastructure PASS.",
+      "evidence_artifact": "docs/release/benchmark-card.md"
+    }
+  ]
+}

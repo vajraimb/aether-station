@@ -1,0 +1,36 @@
+{
+  "run_id": "aether-robust-terminal",
+  "kind": "research_study",
+  "status": "archived",
+  "domain": "aether",
+  "environment_version": "aether-station@0.1.0-benchmark",
+  "agent_version": "offline-robust-terminal",
+  "code_sha": "7910694e4422e590eac5b9e19b635f06ed56013b",
+  "physics_sha": "bdfff5b4c62733d7156d2f9cdeeaa75661d6c9f4",
+  "agent_sha": "archive/robust-terminal-study",
+  "scenario_hash": null,
+  "config_hash": "eta-2sigma",
+  "seed_set": null,
+  "parent_run_id": "aether-wrench-nullspace",
+  "failure_class": "online_gate_fail",
+  "metrics": {
+    "nominalCapture": 0.14285714285714285,
+    "readyToWire": false
+  },
+  "artifacts": [
+    "outputs/robust-terminal-study.json"
+  ],
+  "reproduction_command": "npm run eval:robust-terminal",
+  "claims": [
+    {
+      "type": "measured",
+      "statement": "Robust terminal cancellation nominal capture 6/42 (14%), near-close only.",
+      "evidence_artifact": "outputs/robust-terminal-study.json"
+    },
+    {
+      "type": "search_unreached",
+      "statement": "Did not meet 80%/70% capture gates under 24 segments. READY TO WIRE: NO.",
+      "evidence_artifact": "outputs/robust-terminal-study.json"
+    }
+  ]
+}
