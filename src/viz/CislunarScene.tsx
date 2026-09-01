@@ -9,6 +9,8 @@ import {
   makeEarthTexture,
   makeMoonTexture,
   makeStarPositions,
+  makeSunDiskTexture,
+  makeSunGlowTexture,
   useOptionalTexture,
 } from "./globe-textures";
 import type { CameraMode } from "./cislunar-types";
@@ -281,20 +283,37 @@ function attitudeOf(sample: CislunarSample): THREE.Quaternion {
 
 function Sun({ t }: { t: number }) {
   const dir = sunDir(t);
-  const pos = dir.clone().multiplyScalar(420);
-  const fill = dir.clone().multiplyScalar(-80);
+  const pos = dir.clone().multiplyScalar(720);
+  const fill = dir.clone().multiplyScalar(-90);
+  const disk = useMemo(() => makeSunDiskTexture(), []);
+  const glow = useMemo(() => makeSunGlowTexture(), []);
   return (
     <>
       <ambientLight intensity={0.05} />
       <hemisphereLight args={["#b7c8de", "#0a0908", 0.12]} />
       <directionalLight position={pos} intensity={3.4} color="#fff1c8" />
       <directionalLight position={fill} intensity={0.07} color="#6a7fa0" />
-      <mesh position={pos}>
-        <sphereGeometry args={[5.5, 16, 12]} />
-        <meshBasicMaterial color="#fff6d0" />
-      </mesh>
-      <sprite position={pos} scale={[28, 28, 1]}>
-        <spriteMaterial color="#ffe29a" transparent opacity={0.55} depthWrite={false} blending={THREE.AdditiveBlending} />
+      <sprite position={pos} scale={[56, 56, 1]} renderOrder={-2}>
+        <spriteMaterial
+          map={glow}
+          transparent
+          depthWrite={false}
+          blending={THREE.AdditiveBlending}
+          opacity={0.85}
+        />
+      </sprite>
+      <sprite position={pos} scale={[22, 22, 1]} renderOrder={-1}>
+        <spriteMaterial
+          map={glow}
+          transparent
+          depthWrite={false}
+          blending={THREE.AdditiveBlending}
+          color="#fff4c8"
+          opacity={0.9}
+        />
+      </sprite>
+      <sprite position={pos} scale={[9.5, 9.5, 1]} renderOrder={0}>
+        <spriteMaterial map={disk} transparent depthWrite={false} />
       </sprite>
     </>
   );

@@ -101,6 +101,65 @@ export function makeMoonTexture(): THREE.CanvasTexture {
   return tex;
 }
 
+export function makeSunDiskTexture(): THREE.CanvasTexture {
+  const s = 256;
+  const c = document.createElement("canvas");
+  c.width = s;
+  c.height = s;
+  const ctx = c.getContext("2d")!;
+  const img = ctx.createImageData(s, s);
+  const cx = (s - 1) * 0.5;
+  for (let y = 0; y < s; y++) {
+    for (let x = 0; x < s; x++) {
+      const dx = (x - cx) / cx;
+      const dy = (y - cx) / cx;
+      const r2 = dx * dx + dy * dy;
+      const i = (y * s + x) * 4;
+      if (r2 > 1) {
+        img.data[i + 3] = 0;
+        continue;
+      }
+      const limb = Math.pow(Math.max(0, 1 - r2), 0.42);
+      const n = fbm(dx * 5.5 + 2.1, dy * 5.5 + 0.7);
+      const hot = limb * (0.72 + n * 0.28);
+      img.data[i] = 255;
+      img.data[i + 1] = Math.round(168 + hot * 82);
+      img.data[i + 2] = Math.round(48 + hot * 140);
+      img.data[i + 3] = Math.round(255 * Math.min(1, (1 - r2) * 18));
+    }
+  }
+  ctx.putImageData(img, 0, 0);
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.needsUpdate = true;
+  return tex;
+}
+
+function paintRadial(stops: Array<[number, string]>): THREE.CanvasTexture {
+  const s = 256;
+  const c = document.createElement("canvas");
+  c.width = s;
+  c.height = s;
+  const g = c.getContext("2d")!;
+  const grd = g.createRadialGradient(s / 2, s / 2, 0, s / 2, s / 2, s / 2);
+  for (const [t, color] of stops) grd.addColorStop(t, color);
+  g.fillStyle = grd;
+  g.fillRect(0, 0, s, s);
+  const tex = new THREE.CanvasTexture(c);
+  tex.needsUpdate = true;
+  return tex;
+}
+
+export function makeSunGlowTexture(): THREE.CanvasTexture {
+  return paintRadial([
+    [0, "rgba(255,252,236,0.95)"],
+    [0.1, "rgba(255,228,150,0.7)"],
+    [0.28, "rgba(255,170,70,0.28)"],
+    [0.52, "rgba(255,110,36,0.08)"],
+    [1, "rgba(255,70,10,0)"],
+  ]);
+}
+
 export function makeStarPositions(n = 2200, radius = 1400): Float32Array {
   const arr = new Float32Array(n * 3);
   for (let i = 0; i < n; i++) {
