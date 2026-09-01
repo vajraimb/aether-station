@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import * as THREE from "three";
 
 function hash(ix: number, iy: number): number {
@@ -100,7 +101,7 @@ export function makeMoonTexture(): THREE.CanvasTexture {
   return tex;
 }
 
-export function makeStarPositions(n = 1600, radius = 2200): Float32Array {
+export function makeStarPositions(n = 2200, radius = 1400): Float32Array {
   const arr = new Float32Array(n * 3);
   for (let i = 0; i < n; i++) {
     const u = Math.random();
@@ -113,4 +114,41 @@ export function makeStarPositions(n = 1600, radius = 2200): Float32Array {
     arr[i * 3 + 2] = r * Math.cos(phi);
   }
   return arr;
+}
+
+function prep(t: THREE.Texture, srgb: boolean): THREE.Texture {
+  t.colorSpace = srgb ? THREE.SRGBColorSpace : THREE.NoColorSpace;
+  t.anisotropy = 8;
+  t.wrapS = THREE.RepeatWrapping;
+  t.wrapT = THREE.ClampToEdgeWrapping;
+  t.minFilter = THREE.LinearMipmapLinearFilter;
+  t.magFilter = THREE.LinearFilter;
+  t.needsUpdate = true;
+  return t;
+}
+
+export function useOptionalTexture(url: string, srgb = true): THREE.Texture | null {
+  const [tex, setTex] = useState<THREE.Texture | null>(null);
+  useEffect(() => {
+    let live = true;
+    const loader = new THREE.TextureLoader();
+    loader.load(
+      url,
+      (t) => {
+        if (!live) {
+          t.dispose();
+          return;
+        }
+        setTex(prep(t, srgb));
+      },
+      undefined,
+      () => {
+        if (live) setTex(null);
+      },
+    );
+    return () => {
+      live = false;
+    };
+  }, [url, srgb]);
+  return tex;
 }

@@ -1,11 +1,16 @@
-import { useMemo, useRef, type MutableRefObject } from "react";
+import { useMemo, useRef, useEffect, type MutableRefObject } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { Line, OrbitControls } from "@react-three/drei";
 import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
 import * as THREE from "three";
 import { A_MOON, R_LEO, isLunarPhase, type Phase } from "../../domains/cislunar/constants";
 import type { CislunarMission, CislunarSample } from "../../domains/cislunar/trajectory";
-import { makeEarthTexture, makeMoonTexture, makeStarPositions } from "./globe-textures";
+import {
+  makeEarthTexture,
+  makeMoonTexture,
+  makeStarPositions,
+  useOptionalTexture,
+} from "./globe-textures";
 import type { CameraMode } from "./cislunar-types";
 
 const PHASE_COLOR: Record<Phase, string> = {
@@ -78,41 +83,132 @@ function AxisTriplet({ scale = 2.4, opacity = 1 }: { scale?: number; opacity?: n
   );
 }
 
+function Atmosphere({ radius }: { radius: number }) {
+  const mat = useMemo(
+    () =>
+      new THREE.ShaderMaterial({
+        transparent: true,
+        blending: THREE.AdditiveBlending,
+        side: THREE.BackSide,
+        depthWrite: false,
+        uniforms: {},
+        vertexShader: `
+          varying vec3 vNormalW;
+          varying vec3 vViewW;
+          void main() {
+            vec4 w = modelMatrix * vec4(position, 1.0);
+            vNormalW = normalize(mat3(modelMatrix) * normal);
+            vViewW = cameraPosition - w.xyz;
+            gl_Position = projectionMatrix * viewMatrix * w;
+          }
+        `,
+        fragmentShader: `
+          varying vec3 vNormalW;
+          varying vec3 vViewW;
+          void main() {
+            float f = pow(1.0 - abs(dot(normalize(vNormalW), normalize(vViewW))), 2.6);
+            gl_FragColor = vec4(0.32, 0.58, 1.0, f * 0.55);
+          }
+        `,
+      }),
+    [],
+  );
+  useEffect(() => () => mat.dispose(), [mat]);
+  return (
+    <mesh scale={1.045}>
+      <sphereGeometry args={[radius, 64, 48]} />
+      <primitive object={mat} attach="material" />
+    </mesh>
+  );
+}
+
 function Earth() {
-  const map = useMemo(() => makeEarthTexture(), []);
+  const day = useOptionalTexture("/textures/earth-day.jpg", true);
+  const night = useOptionalTexture("/textures/earth-night.png", true);
+  const clouds = useOptionalTexture("/textures/earth-clouds.png", false);
+  const spec = useOptionalTexture("/textures/earth-specular.jpg", false);
+  const normal = useOptionalTexture("/textures/earth-normal.jpg", false);
+  const fallback = useMemo(() => makeEarthTexture(), []);
+  const globe = useRef<THREE.Group>(null);
+  const cloudRef = useRef<THREE.Mesh>(null);
   const r = VIS_EARTH_R;
-  const ref = useRef<THREE.Mesh>(null);
+
   useFrame((_, d) => {
-    if (ref.current) ref.current.rotation.y += Math.min(d, 0.1) * 0.02;
+    const dt = Math.min(d, 0.1);
+    if (globe.current) globe.current.rotation.y += dt * 0.018;
+    if (cloudRef.current) cloudRef.current.rotation.y += dt * 0.026;
   });
+
   return (
     <group>
-      <mesh ref={ref}>
-        <sphereGeometry args={[r, 96, 64]} />
-        <meshStandardMaterial
-          map={map}
-          roughness={0.62}
-          metalness={0.04}
-          emissive="#245a96"
-          emissiveIntensity={0.28}
-        />
-      </mesh>
-      <mesh scale={1.035}>
-        <sphereGeometry args={[r, 48, 32]} />
-        <meshBasicMaterial color="#7eb6e8" transparent opacity={0.22} side={THREE.BackSide} />
-      </mesh>
+      <group ref={globe}>
+        <mesh>
+          <sphereGeometry args={[r, 128, 96]} />
+          <meshStandardMaterial
+            key={night ? "earth-lit" : "earth-plain"}
+            map={day ?? fallback}
+            normalMap={normal ?? undefined}
+            normalScale={[0.55, 0.55]}
+            metalnessMap={spec ?? undefined}
+            metalness={spec ? 0.22 : 0.08}
+            roughness={0.48}
+            emissiveMap={night ?? undefined}
+            emissive={night ? "#ffcc88" : "#1b4f86"}
+            emissiveIntensity={night ? 1.15 : 0.22}
+            onBeforeCompile={(shader) => {
+              shader.fragmentShader = shader.fragmentShader.replace(
+                "#include <lights_physical_fragment>",
+                `#ifdef USE_EMISSIVEMAP
+                 {
+                   vec3 lightDir = directionalLights[0].direction;
+                   float nightFactor = 1.0 - smoothstep(-0.05, 0.28, dot(normal, lightDir));
+                   totalEmissiveRadiance *= nightFactor;
+                 }
+                 #endif
+                 #include <lights_physical_fragment>`,
+              );
+            }}
+          />
+        </mesh>
+        {clouds && (
+          <mesh ref={cloudRef} scale={1.008}>
+            <sphereGeometry args={[r, 96, 64]} />
+            <meshBasicMaterial
+              map={clouds}
+              transparent
+              opacity={0.7}
+              depthWrite={false}
+              blending={THREE.AdditiveBlending}
+            />
+          </mesh>
+        )}
+      </group>
+      <Atmosphere radius={r} />
     </group>
   );
 }
 
 function Moon({ pos }: { pos: THREE.Vector3 }) {
-  const map = useMemo(() => makeMoonTexture(), []);
+  const map = useOptionalTexture("/textures/moon.jpg", true);
+  const fallback = useMemo(() => makeMoonTexture(), []);
   const r = VIS_MOON_R;
+  const ref = useRef<THREE.Group>(null);
+  useFrame(() => {
+    if (!ref.current) return;
+    ref.current.position.copy(pos);
+    ref.current.lookAt(0, 0, 0);
+  });
   return (
-    <group position={pos}>
-      <mesh>
-        <sphereGeometry args={[r, 64, 48]} />
-        <meshStandardMaterial map={map} roughness={0.92} metalness={0} emissive="#3a3a38" emissiveIntensity={0.18} />
+    <group ref={ref}>
+      <mesh rotation={[0, Math.PI, 0]}>
+        <sphereGeometry args={[r, 96, 64]} />
+        <meshStandardMaterial
+          map={map ?? fallback}
+          bumpMap={map ?? fallback}
+          bumpScale={0.55}
+          roughness={1}
+          metalness={0}
+        />
       </mesh>
     </group>
   );
@@ -435,10 +531,10 @@ function SceneBody({
   return (
     <>
       <color attach="background" args={["#07080c"]} />
-      <ambientLight intensity={0.42} />
-      <hemisphereLight args={["#c5d6ea", "#2a241c", 0.65]} />
-      <directionalLight position={[420, 180, 90]} intensity={2.6} color="#fff7ea" />
-      <directionalLight position={[-80, 40, -120]} intensity={0.25} color="#8aa4c8" />
+      <ambientLight intensity={0.22} />
+      <hemisphereLight args={["#c5d6ea", "#1a1610", 0.42]} />
+      <directionalLight position={[420, 180, 90]} intensity={2.8} color="#fff4e0" />
+      <directionalLight position={[-80, 40, -120]} intensity={0.08} color="#8aa4c8" />
       <Stars />
       <gridHelper args={[720, 18, "#1c2230", "#12161f"]} />
       <Earth />
