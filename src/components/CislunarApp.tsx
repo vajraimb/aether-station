@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { Pause, Play, RotateCcw, SkipForward } from "lucide-react";
-import { PHASE_LABEL, type Phase } from "../../domains/cislunar/constants";
+import { Pause, Play, Repeat, RotateCcw, SkipForward } from "lucide-react";
+import { PHASE_LABEL, isLunarPhase, type Phase } from "../../domains/cislunar/constants";
 import { buildCislunarMission, sampleAt } from "../../domains/cislunar/trajectory";
 import { CislunarCanvas, CraftInset } from "@/viz/CislunarCanvas";
 import type { CameraMode } from "@/viz/cislunar-types";
@@ -11,15 +11,16 @@ const AUTO_WARP: Record<Phase, number> = {
   tli: 20,
   coast: 14000,
   loi: 40,
-  llo: 220,
+  llo: 2500,
+  revolution: 120000,
 };
 
 const WARPS: { label: string; value: number | "auto" }[] = [
   { label: "Auto", value: "auto" },
-  { label: "100×", value: 100 },
   { label: "1k×", value: 1_000 },
   { label: "10k×", value: 10_000 },
-  { label: "50k×", value: 50_000 },
+  { label: "100k×", value: 100_000 },
+  { label: "250k×", value: 250_000 },
 ];
 
 function fmtTime(t: number): string {
@@ -85,36 +86,51 @@ export function CislunarApp() {
   const mission = useMemo(() => buildCislunarMission(), []);
   const [briefing, setBriefing] = useState(true);
   const [playing, setPlaying] = useState(false);
+  const [loop, setLoop] = useState(true);
   const [warp, setWarp] = useState<number | "auto">("auto");
   const [t, setT] = useState(0);
   const [mode, setMode] = useState<CameraMode>("earth");
+  const prevPhase = useRef<Phase | null>(null);
 
   useEffect(() => {
     if (!playing || briefing) return;
     let last = performance.now();
     let raf = 0;
-    const loop = (now: number) => {
+    const loopFrame = (now: number) => {
       const dt = Math.min(0.1, (now - last) / 1000);
       last = now;
       setT((prev) => {
         const nowSample = sampleAt(mission, prev);
         const rate = warp === "auto" ? AUTO_WARP[nowSample.phase] : warp;
-        const next = prev + dt * rate;
+        let next = prev + dt * rate;
         if (next >= mission.duration) {
+          if (loop) return next % mission.duration;
           setPlaying(false);
           return mission.duration;
         }
         return next;
       });
-      raf = requestAnimationFrame(loop);
+      raf = requestAnimationFrame(loopFrame);
     };
-    raf = requestAnimationFrame(loop);
+    raf = requestAnimationFrame(loopFrame);
     return () => cancelAnimationFrame(raf);
-  }, [playing, warp, briefing, mission]);
+  }, [playing, warp, briefing, mission, loop]);
 
   const sample = useMemo(() => sampleAt(mission, t), [mission, t]);
   const progress = t / mission.duration;
   const phase: Phase = sample.phase;
+  const moonDeg =
+    sample.t <= mission.tCapture
+      ? 0
+      : Math.min(360, ((sample.t - mission.tCapture) / mission.periodMoon) * 360);
+
+  useEffect(() => {
+    const prev = prevPhase.current;
+    prevPhase.current = phase;
+    if (prev === phase || prev === null) return;
+    if (phase === "llo" && (mode === "earth" || mode === "overview")) setMode("moon");
+    if (phase === "revolution") setMode("overview");
+  }, [phase, mode]);
 
   const start = () => {
     setBriefing(false);
@@ -170,15 +186,15 @@ export function CislunarApp() {
               </div>
               <h2 className="mt-1 text-2xl font-semibold tracking-tight">Earth to lunar orbit</h2>
               <p className="mt-3 text-sm leading-relaxed text-fg-muted">
-                Drag to orbit, scroll or pinch to zoom. System view shows the whole transfer.
-                Craft view and the inset show the probe with body axes (red radial, green
-                normal, blue prograde). HUD speeds and altitudes are physical; the 3D layout
-                is enlarged so Earth, Moon and the vehicle are all readable.
+                LEO parking, trans-lunar injection, capture into a 100 km lunar orbit, then
+                the probe stays in LLO while the Moon completes one full revolution around
+                Earth. Drag to orbit, scroll to zoom. System view shows the whole circuit.
               </p>
               <ul className="mt-4 space-y-1.5 font-mono text-xs text-fg-muted">
                 <li>TLI Δv ≈ {mission.dvTli.toFixed(2)} km/s</li>
                 <li>Coast {(mission.tofCoast / 86400).toFixed(2)} days · Moon 384,400 km</li>
-                <li>LLO 100 km · {PHASE_LABEL.llo}</li>
+                <li>LLO 100 km · {(mission.periodLlo / 3600).toFixed(1)} h period</li>
+                <li>Moon around Earth {(mission.periodMoon / 86400).toFixed(2)} days</li>
               </ul>
               <div className="mt-5">
                 <Btn onClick={start} active>
@@ -199,14 +215,20 @@ export function CislunarApp() {
                 <Chip label="Phase" value={PHASE_LABEL[phase]} tone="ok" />
                 <Chip label="Mission time" value={fmtTime(sample.t)} />
                 <Chip
-                  label={phase === "llo" ? "Moon altitude" : "Earth altitude"}
+                  label={isLunarPhase(phase) ? "Moon altitude" : "Earth altitude"}
                   value={
-                    (phase === "llo" ? sample.altMoon : sample.altEarth) > 2000
-                      ? `${((phase === "llo" ? sample.altMoon : sample.altEarth) / 1000).toFixed(0)} Mm`
-                      : `${(phase === "llo" ? sample.altMoon : sample.altEarth).toFixed(0)} km`
+                    (isLunarPhase(phase) ? sample.altMoon : sample.altEarth) > 2000
+                      ? `${((isLunarPhase(phase) ? sample.altMoon : sample.altEarth) / 1000).toFixed(0)} Mm`
+                      : `${(isLunarPhase(phase) ? sample.altMoon : sample.altEarth).toFixed(0)} km`
                   }
                 />
-                <Chip label="Speed" value={`${sample.speed.toFixed(2)} km/s`} />
+                <Chip
+                  label={phase === "revolution" ? "Moon orbit" : "Speed"}
+                  value={
+                    phase === "revolution" ? `${moonDeg.toFixed(0)}°` : `${sample.speed.toFixed(2)} km/s`
+                  }
+                  tone={phase === "revolution" ? "ok" : "muted"}
+                />
               </div>
               <div className="flex flex-wrap items-center gap-2">
                 <Btn onClick={() => setPlaying((p) => !p)} active={playing} title={playing ? "Pause" : "Play"}>
@@ -223,6 +245,9 @@ export function CislunarApp() {
                 </Btn>
                 <Btn onClick={skipPhase} title="Next phase">
                   <SkipForward className="size-4" />
+                </Btn>
+                <Btn onClick={() => setLoop((v) => !v)} active={loop} title="Loop">
+                  <Repeat className="size-4" />
                 </Btn>
                 <div className="mx-1 h-6 w-px bg-border" />
                 {WARPS.map((w) => (

@@ -28,6 +28,11 @@ export interface CislunarMission {
   tofCoast: number;
   dvTli: number;
   dvLoi: number;
+  tTli: number;
+  tCapture: number;
+  periodLlo: number;
+  periodMoon: number;
+  angle0: number;
   phases: { phase: Phase; t0: number; t1: number; label: string }[];
 }
 
@@ -57,14 +62,34 @@ function pack(
   };
 }
 
-/** Hohmann-like Earth–Moon transfer then circular LLO. Deterministic. */
+function lloAroundMoon(
+  phys: number,
+  angle0: number,
+  tLoiPhys: number,
+): { r: [number, number, number]; v: [number, number, number]; moon: [number, number, number] } {
+  const moon = moonOnRail(phys, angle0);
+  const n = Math.sqrt(MU_MOON / (R_LLO * R_LLO * R_LLO));
+  const th = n * (phys - tLoiPhys);
+  const s = circularState(MU_MOON, R_LLO, th, moon[0], moon[1], moon[2]);
+  return { r: s.r, v: s.v, moon };
+}
+
+function phaseOfLlo(tau: number, periodLlo: number): Phase {
+  if (tau < 45) return "loi";
+  if (tau < 4 * periodLlo) return "llo";
+  return "revolution";
+}
+
+/** Hohmann-like Earth–Moon transfer, circular LLO, then one lunar sidereal month. */
 export function buildCislunarMission(): CislunarMission {
   const rp = R_LEO;
   const ra = A_MOON;
   const a = (rp + ra) / 2;
   const e = (ra - rp) / (ra + rp);
   const tofCoast = Math.PI * Math.sqrt((a * a * a) / MU_EARTH);
-  const nMoon = Math.sqrt(MU_EARTH / (A_MOON * A_MOON * A_MOON));
+  const periodMoon = 2 * Math.PI * Math.sqrt((A_MOON * A_MOON * A_MOON) / MU_EARTH);
+  const periodLlo = 2 * Math.PI * Math.sqrt((R_LLO * R_LLO * R_LLO) / MU_MOON);
+  const nMoon = 2 * Math.PI / periodMoon;
   const angle0 = Math.PI - nMoon * tofCoast;
 
   const vLeo = Math.sqrt(MU_EARTH / R_LEO);
@@ -90,26 +115,30 @@ export function buildCislunarMission(): CislunarMission {
     samples.push(pack(t, s.r, s.v, moonOnRail(t, angle0), phase));
   }
 
-  const tLoi = tofCoast;
-  const moonCap = moonOnRail(tLoi, angle0);
-  const tLlo = 3 * 2 * Math.PI * Math.sqrt((R_LLO * R_LLO * R_LLO) / MU_MOON);
-  const nLlo = 180;
-  for (let i = 0; i < nLlo; i++) {
-    const tau = (i / (nLlo - 1)) * tLlo;
-    const th = (i / (nLlo - 1)) * 6 * Math.PI;
-    const s = circularState(MU_MOON, R_LLO, th, moonCap[0], moonCap[1], moonCap[2]);
-    const moon = moonOnRail(tLoi + tau, angle0);
-    const r: [number, number, number] = [
-      s.r[0] - moonCap[0] + moon[0],
-      s.r[1] - moonCap[1] + moon[1],
-      s.r[2] - moonCap[2] + moon[2],
-    ];
-    samples.push(pack(tLoi + tau, r, s.v, moon, i === 0 ? "loi" : "llo"));
+  const tLoiPhys = tofCoast;
+  const nLloShow = 4;
+  const nDense = 96;
+  for (let i = 0; i < nDense; i++) {
+    const tau = (i / (nDense - 1)) * nLloShow * periodLlo;
+    const phys = tLoiPhys + tau;
+    const s = lloAroundMoon(phys, angle0, tLoiPhys);
+    samples.push(pack(phys, s.r, s.v, s.moon, phaseOfLlo(tau, periodLlo)));
+  }
+
+  const tRev0 = nLloShow * periodLlo;
+  const nRev = 240;
+  for (let i = 1; i < nRev; i++) {
+    const tau = tRev0 + (i / (nRev - 1)) * (periodMoon - tRev0);
+    const phys = tLoiPhys + tau;
+    const s = lloAroundMoon(phys, angle0, tLoiPhys);
+    samples.push(pack(phys, s.r, s.v, s.moon, "revolution"));
   }
 
   const t0 = samples[0]!.t;
   for (const s of samples) s.t -= t0;
   const duration = samples[samples.length - 1]!.t;
+  const tTli = -t0;
+  const tCapture = tLoiPhys - t0;
 
   const phases: CislunarMission["phases"] = [];
   let cur = samples[0]!.phase;
@@ -123,12 +152,30 @@ export function buildCislunarMission(): CislunarMission {
   }
   phases.push({ phase: cur, t0: start, t1: duration, label: PHASE_LABEL[cur] });
 
-  return { samples, duration, tofCoast, dvTli, dvLoi, phases };
+  return {
+    samples,
+    duration,
+    tofCoast,
+    dvTli,
+    dvLoi,
+    tTli,
+    tCapture,
+    periodLlo,
+    periodMoon,
+    angle0,
+    phases,
+  };
 }
 
 export function sampleAt(mission: CislunarMission, t: number): CislunarSample {
+  const tt = Math.min(Math.max(t, 0), mission.duration);
+  if (tt + 1e-6 >= mission.tCapture) {
+    const phys = tt - mission.tTli;
+    const s = lloAroundMoon(phys, mission.angle0, mission.tCapture - mission.tTli);
+    const tau = tt - mission.tCapture;
+    return pack(tt, s.r, s.v, s.moon, phaseOfLlo(tau, mission.periodLlo));
+  }
   const xs = mission.samples;
-  const tt = Math.min(Math.max(t, xs[0]!.t), xs[xs.length - 1]!.t);
   let lo = 0;
   let hi = xs.length - 1;
   while (hi - lo > 1) {
@@ -144,8 +191,5 @@ export function sampleAt(mission: CislunarMission, t: number): CislunarSample {
     p[1] + (q[1] - p[1]) * u,
     p[2] + (q[2] - p[2]) * u,
   ];
-  const r = lerp(a.r, b.r);
-  const v = lerp(a.v, b.v);
-  const moon = lerp(a.moon, b.moon);
-  return pack(tt, r, v, moon, u < 0.5 ? a.phase : b.phase);
+  return pack(tt, lerp(a.r, b.r), lerp(a.v, b.v), lerp(a.moon, b.moon), u < 0.5 ? a.phase : b.phase);
 }

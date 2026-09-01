@@ -16,7 +16,7 @@ export const R_LLO = R_MOON + LLO_ALT;
 /** Scene units per kilometre. Earth radius ≈ 12.7, Earth–Moon ≈ 769. */
 export const KM_TO_SCENE = 1 / 500;
 
-export const PHASES = ["leo", "tli", "coast", "loi", "llo"] as const;
+export const PHASES = ["leo", "tli", "coast", "loi", "llo", "revolution"] as const;
 export type Phase = (typeof PHASES)[number];
 
 export const PHASE_LABEL: Record<Phase, string> = {
@@ -25,4 +25,9 @@ export const PHASE_LABEL: Record<Phase, string> = {
   coast: "Translunar coast",
   loi: "LOI burn",
   llo: "Lunar orbit",
+  revolution: "Moon around Earth",
 };
+
+export function isLunarPhase(phase: Phase): boolean {
+  return phase === "loi" || phase === "llo" || phase === "revolution";
+}

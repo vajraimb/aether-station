@@ -3,7 +3,7 @@ import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { Line, OrbitControls } from "@react-three/drei";
 import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
 import * as THREE from "three";
-import { A_MOON, R_LEO, type Phase } from "../../domains/cislunar/constants";
+import { A_MOON, R_LEO, isLunarPhase, type Phase } from "../../domains/cislunar/constants";
 import type { CislunarMission, CislunarSample } from "../../domains/cislunar/trajectory";
 import { makeEarthTexture, makeMoonTexture, makeStarPositions } from "./globe-textures";
 import type { CameraMode } from "./cislunar-types";
@@ -14,6 +14,7 @@ const PHASE_COLOR: Record<Phase, string> = {
   coast: "#c4a574",
   loi: "#c88858",
   llo: "#7dba9a",
+  revolution: "#7dba9a",
 };
 
 const ORIGIN = new THREE.Vector3();
@@ -40,7 +41,7 @@ function craftVisual(sample: CislunarSample): THREE.Vector3 {
     if (r.lengthSq() < 1e-8) return new THREE.Vector3(VIS_LEO_R, 0, 0);
     return r.setLength(VIS_LEO_R);
   }
-  if (sample.phase === "llo" || sample.phase === "loi") {
+  if (isLunarPhase(sample.phase)) {
     const rel = vec3(sample.r).sub(vec3(sample.moon));
     if (rel.lengthSq() < 1e-8) return moon.clone().add(new THREE.Vector3(VIS_LLO_R, 0, 0));
     return moon.clone().add(rel.setLength(VIS_LLO_R));
@@ -155,7 +156,7 @@ function attitudeOf(sample: CislunarSample): THREE.Quaternion {
   const r = vec3(sample.r);
   const v = vec3(sample.v);
   const primary =
-    sample.phase === "llo" || sample.phase === "loi" ? vec3(sample.moon) : ORIGIN.clone();
+    isLunarPhase(sample.phase) ? vec3(sample.moon) : ORIGIN.clone();
   const radial = r.clone().sub(primary);
   if (radial.lengthSq() < 1e-10) radial.set(1, 0, 0);
   else radial.normalize();
@@ -290,6 +291,7 @@ function Trajectory({ mission }: { mission: CislunarMission }) {
     let cur: Phase | null = null;
     let pts: [number, number, number][] = [];
     for (const s of mission.samples) {
+      if (s.phase === "revolution") continue;
       if (s.phase !== cur) {
         if (cur && pts.length > 1) byPhase.push({ phase: cur, pts });
         cur = s.phase;
@@ -305,6 +307,24 @@ function Trajectory({ mission }: { mission: CislunarMission }) {
       {segments.map((seg, i) => (
         <Line key={i} points={seg.pts} color={PHASE_COLOR[seg.phase]} lineWidth={2.2} transparent opacity={0.92} />
       ))}
+    </group>
+  );
+}
+
+function LunarOrbit({ moon }: { moon: THREE.Vector3 }) {
+  const pts = useMemo(() => {
+    const n = 64;
+    const r = VIS_LLO_R;
+    const out: [number, number, number][] = [];
+    for (let i = 0; i <= n; i++) {
+      const th = (i / n) * Math.PI * 2;
+      out.push([r * Math.cos(th), 0, r * Math.sin(th)]);
+    }
+    return out;
+  }, []);
+  return (
+    <group position={moon}>
+      <Line points={pts} color="#7dba9a" lineWidth={1.4} transparent opacity={0.7} />
     </group>
   );
 }
@@ -424,6 +444,7 @@ function SceneBody({
       <Earth />
       <Moon pos={moonPos} />
       <MoonOrbit />
+      <LunarOrbit moon={moonPos} />
       <Trajectory mission={mission} />
       <Probe sample={sample} />
       <CraftBeacon position={craftPos} />
