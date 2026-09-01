@@ -1,12 +1,13 @@
-import { useMemo, useRef } from "react";
-import { Canvas, useFrame } from "@react-three/fiber";
-import { OrbitControls, Line } from "@react-three/drei";
+import { useMemo, useRef, type MutableRefObject } from "react";
+import { Canvas, useFrame, useThree } from "@react-three/fiber";
+import { Line, OrbitControls } from "@react-three/drei";
+import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
 import * as THREE from "three";
-import { KM_TO_SCENE, R_EARTH, R_MOON, type Phase } from "../../domains/cislunar/constants";
+import { A_MOON, R_LEO, type Phase } from "../../domains/cislunar/constants";
 import type { CislunarMission, CislunarSample } from "../../domains/cislunar/trajectory";
 import { makeEarthTexture, makeMoonTexture, makeStarPositions } from "./globe-textures";
-
 import type { CameraMode } from "./cislunar-types";
+
 const PHASE_COLOR: Record<Phase, string> = {
   leo: "#6a92c8",
   tli: "#c88858",
@@ -15,8 +16,40 @@ const PHASE_COLOR: Record<Phase, string> = {
   llo: "#7dba9a",
 };
 
-function toScene(p: readonly [number, number, number]): THREE.Vector3 {
-  return new THREE.Vector3(p[0] * KM_TO_SCENE, p[1] * KM_TO_SCENE, p[2] * KM_TO_SCENE);
+const ORIGIN = new THREE.Vector3();
+const VIS_MOON_DIST = 280;
+const VIS_EARTH_R = 36;
+const VIS_MOON_R = 11;
+const VIS_LEO_R = 43;
+const VIS_LLO_R = 14.4;
+
+function vec3(p: readonly [number, number, number]): THREE.Vector3 {
+  return new THREE.Vector3(p[0], p[1], p[2]);
+}
+
+function moonVisual(moon: readonly [number, number, number]): THREE.Vector3 {
+  const v = vec3(moon);
+  if (v.lengthSq() < 1e-8) return new THREE.Vector3(VIS_MOON_DIST, 0, 0);
+  return v.setLength(VIS_MOON_DIST);
+}
+
+function craftVisual(sample: CislunarSample): THREE.Vector3 {
+  const moon = moonVisual(sample.moon);
+  const r = vec3(sample.r);
+  if (sample.phase === "leo" || sample.phase === "tli") {
+    if (r.lengthSq() < 1e-8) return new THREE.Vector3(VIS_LEO_R, 0, 0);
+    return r.setLength(VIS_LEO_R);
+  }
+  if (sample.phase === "llo" || sample.phase === "loi") {
+    const rel = vec3(sample.r).sub(vec3(sample.moon));
+    if (rel.lengthSq() < 1e-8) return moon.clone().add(new THREE.Vector3(VIS_LLO_R, 0, 0));
+    return moon.clone().add(rel.setLength(VIS_LLO_R));
+  }
+  const distPhys = r.length();
+  const u = Math.min(1, Math.max(0, (distPhys - R_LEO) / (A_MOON - R_LEO)));
+  const dist = VIS_LEO_R + u * (VIS_MOON_DIST - VIS_LLO_R - VIS_LEO_R);
+  if (r.lengthSq() < 1e-8) return new THREE.Vector3(dist, 0, 0);
+  return r.setLength(dist);
 }
 
 function Stars() {
@@ -27,14 +60,26 @@ function Stars() {
   }, []);
   return (
     <points geometry={geom}>
-      <pointsMaterial color="#e8eaef" size={2.4} sizeAttenuation={false} />
+      <pointsMaterial color="#e8eaef" size={2.2} sizeAttenuation={false} />
     </points>
+  );
+}
+
+function AxisTriplet({ scale = 2.4, opacity = 1 }: { scale?: number; opacity?: number }) {
+  const s = scale;
+  const o: [number, number, number] = [0, 0, 0];
+  return (
+    <group>
+      <Line points={[o, [s, 0, 0]]} color="#d07070" lineWidth={2} transparent opacity={opacity} />
+      <Line points={[o, [0, s, 0]]} color="#70b080" lineWidth={2} transparent opacity={opacity} />
+      <Line points={[o, [0, 0, s]]} color="#6a92c8" lineWidth={2} transparent opacity={opacity} />
+    </group>
   );
 }
 
 function Earth() {
   const map = useMemo(() => makeEarthTexture(), []);
-  const r = R_EARTH * KM_TO_SCENE;
+  const r = VIS_EARTH_R;
   const ref = useRef<THREE.Mesh>(null);
   useFrame((_, d) => {
     if (ref.current) ref.current.rotation.y += Math.min(d, 0.1) * 0.02;
@@ -42,12 +87,18 @@ function Earth() {
   return (
     <group>
       <mesh ref={ref}>
-        <sphereGeometry args={[r, 64, 48]} />
-        <meshStandardMaterial map={map} roughness={0.72} metalness={0.02} emissive="#1b4f86" emissiveIntensity={0.35} />
+        <sphereGeometry args={[r, 96, 64]} />
+        <meshStandardMaterial
+          map={map}
+          roughness={0.62}
+          metalness={0.04}
+          emissive="#245a96"
+          emissiveIntensity={0.28}
+        />
       </mesh>
-      <mesh scale={1.045}>
+      <mesh scale={1.035}>
         <sphereGeometry args={[r, 48, 32]} />
-        <meshBasicMaterial color="#7eb6e8" transparent opacity={0.2} side={THREE.BackSide} />
+        <meshBasicMaterial color="#7eb6e8" transparent opacity={0.22} side={THREE.BackSide} />
       </mesh>
     </group>
   );
@@ -55,50 +106,180 @@ function Earth() {
 
 function Moon({ pos }: { pos: THREE.Vector3 }) {
   const map = useMemo(() => makeMoonTexture(), []);
-  const r = R_MOON * KM_TO_SCENE;
-  const ref = useRef<THREE.Group>(null);
-  useFrame(() => {
-    if (!ref.current) return;
-    ref.current.position.copy(pos);
-    ref.current.lookAt(0, 0, 0);
-  });
+  const r = VIS_MOON_R;
   return (
-    <group ref={ref}>
+    <group position={pos}>
       <mesh>
-        <sphereGeometry args={[r, 48, 32]} />
-        <meshStandardMaterial map={map} roughness={0.95} metalness={0} />
+        <sphereGeometry args={[r, 64, 48]} />
+        <meshStandardMaterial map={map} roughness={0.92} metalness={0} emissive="#3a3a38" emissiveIntensity={0.18} />
       </mesh>
     </group>
   );
 }
 
-function Probe({ sample }: { sample: CislunarSample }) {
-  const ref = useRef<THREE.Group>(null);
-  useFrame(() => {
+function makeBeaconTexture(): THREE.CanvasTexture {
+  const c = document.createElement("canvas");
+  c.width = 64;
+  c.height = 64;
+  const g = c.getContext("2d")!;
+  const grd = g.createRadialGradient(32, 32, 1, 32, 32, 30);
+  grd.addColorStop(0, "rgba(255,246,230,1)");
+  grd.addColorStop(0.18, "rgba(232,176,122,0.95)");
+  grd.addColorStop(0.45, "rgba(200,136,88,0.45)");
+  grd.addColorStop(1, "rgba(200,136,88,0)");
+  g.fillStyle = grd;
+  g.fillRect(0, 0, 64, 64);
+  const tex = new THREE.CanvasTexture(c);
+  tex.needsUpdate = true;
+  return tex;
+}
+
+function CraftBeacon({ position }: { position: THREE.Vector3 }) {
+  const map = useMemo(() => makeBeaconTexture(), []);
+  const ref = useRef<THREE.Sprite>(null);
+  useFrame(({ camera }) => {
     if (!ref.current) return;
-    const p = toScene(sample.r);
-    ref.current.position.copy(p);
-    const v = toScene(sample.v);
-    if (v.lengthSq() > 1e-8) {
-      const target = p.clone().add(v.normalize());
-      ref.current.lookAt(target);
-    }
+    ref.current.position.copy(position);
+    const dist = camera.position.distanceTo(position);
+    const s = Math.max(1.6, Math.min(18, dist * 0.022));
+    ref.current.scale.setScalar(s);
   });
   return (
-    <group ref={ref}>
-      <mesh rotation={[Math.PI / 2, 0, 0]}>
-        <capsuleGeometry args={[0.06, 0.16, 6, 10]} />
-        <meshStandardMaterial color="#e8eaef" metalness={0.55} roughness={0.28} />
+    <sprite ref={ref}>
+      <spriteMaterial map={map} transparent depthWrite={false} blending={THREE.AdditiveBlending} />
+    </sprite>
+  );
+}
+
+function attitudeOf(sample: CislunarSample): THREE.Quaternion {
+  const r = vec3(sample.r);
+  const v = vec3(sample.v);
+  const primary =
+    sample.phase === "llo" || sample.phase === "loi" ? vec3(sample.moon) : ORIGIN.clone();
+  const radial = r.clone().sub(primary);
+  if (radial.lengthSq() < 1e-10) radial.set(1, 0, 0);
+  else radial.normalize();
+  const prograde = v.clone();
+  if (prograde.lengthSq() < 1e-10) prograde.set(0, 0, 1);
+  else prograde.normalize();
+  const normal = new THREE.Vector3().crossVectors(radial, prograde);
+  if (normal.lengthSq() < 1e-10) normal.set(0, 1, 0);
+  else normal.normalize();
+  const x = radial;
+  const y = normal;
+  const z = new THREE.Vector3().crossVectors(x, y).normalize();
+  const m = new THREE.Matrix4().makeBasis(x, y, z);
+  return new THREE.Quaternion().setFromRotationMatrix(m);
+}
+
+/** High-detail CSM-style probe. +Z is prograde, engine faces −Z. */
+export function CraftModel({
+  sample,
+  showAxes = true,
+  scale = 1,
+}: {
+  sample: CislunarSample;
+  showAxes?: boolean;
+  scale?: number;
+}) {
+  const burning = sample.phase === "tli" || sample.phase === "loi";
+  return (
+    <group quaternion={attitudeOf(sample)} scale={scale}>
+      <mesh position={[0, 0, 0.18]} rotation={[Math.PI / 2, 0, 0]}>
+        <cylinderGeometry args={[0.22, 0.22, 0.72, 28]} />
+        <meshStandardMaterial color="#9aa4b2" metalness={0.62} roughness={0.32} />
       </mesh>
-      <mesh position={[0.14, 0, 0]}>
-        <boxGeometry args={[0.18, 0.008, 0.09]} />
-        <meshStandardMaterial color="#6a92c8" metalness={0.4} roughness={0.35} emissive="#6a92c8" emissiveIntensity={0.35} />
+      {[-0.36, 0.36].map((z) => (
+        <mesh key={z} position={[0, 0, z]} rotation={[Math.PI / 2, 0, 0]}>
+          <cylinderGeometry args={[0.225, 0.225, 0.04, 28]} />
+          <meshStandardMaterial color="#7c8796" metalness={0.5} roughness={0.4} />
+        </mesh>
+      ))}
+      <mesh position={[0, 0, 0.68]} rotation={[Math.PI / 2, 0, 0]}>
+        <cylinderGeometry args={[0.09, 0.22, 0.28, 24]} />
+        <meshStandardMaterial color="#c5ccd8" metalness={0.45} roughness={0.35} />
       </mesh>
-      <mesh position={[-0.14, 0, 0]}>
-        <boxGeometry args={[0.18, 0.008, 0.09]} />
-        <meshStandardMaterial color="#6a92c8" metalness={0.4} roughness={0.35} emissive="#6a92c8" emissiveIntensity={0.35} />
+      <mesh position={[0, 0, 0.86]}>
+        <sphereGeometry args={[0.09, 16, 12]} />
+        <meshStandardMaterial color="#e8eaef" metalness={0.3} roughness={0.28} />
       </mesh>
-      <pointLight color="#c88858" intensity={0.8} distance={8} />
+      <mesh position={[0, 0, -0.28]} rotation={[Math.PI / 2, 0, 0]}>
+        <cylinderGeometry args={[0.2, 0.2, 0.05, 28]} />
+        <meshStandardMaterial color="#5c6572" metalness={0.7} roughness={0.25} />
+      </mesh>
+      <mesh position={[0, 0, -0.48]} rotation={[Math.PI / 2, 0, 0]}>
+        <coneGeometry args={[0.16, 0.32, 20]} />
+        <meshStandardMaterial
+          color="#6a7180"
+          metalness={0.55}
+          roughness={0.35}
+          emissive={burning ? "#c88858" : "#000000"}
+          emissiveIntensity={burning ? 0.85 : 0}
+        />
+      </mesh>
+      {burning && (
+        <mesh position={[0, 0, -0.92]} rotation={[Math.PI / 2, 0, 0]}>
+          <coneGeometry args={[0.14, 0.7, 16]} />
+          <meshBasicMaterial color="#e8b07a" transparent opacity={0.78} />
+        </mesh>
+      )}
+      <mesh position={[0.72, 0, 0.12]}>
+        <boxGeometry args={[0.95, 0.02, 0.38]} />
+        <meshStandardMaterial
+          color="#6a92c8"
+          metalness={0.35}
+          roughness={0.28}
+          emissive="#6a92c8"
+          emissiveIntensity={0.28}
+        />
+      </mesh>
+      <mesh position={[-0.72, 0, 0.12]}>
+        <boxGeometry args={[0.95, 0.02, 0.38]} />
+        <meshStandardMaterial
+          color="#6a92c8"
+          metalness={0.35}
+          roughness={0.28}
+          emissive="#6a92c8"
+          emissiveIntensity={0.28}
+        />
+      </mesh>
+      <mesh position={[0.22, 0.18, 0.22]} rotation={[0.4, 0.2, 0]}>
+        <cylinderGeometry args={[0.07, 0.07, 0.02, 16]} />
+        <meshStandardMaterial color="#c5ccd8" metalness={0.6} roughness={0.25} />
+      </mesh>
+      {[
+        [0.22, 0.22, 0.42],
+        [-0.22, 0.22, 0.42],
+        [0.22, -0.22, 0.42],
+        [-0.22, -0.22, 0.42],
+      ].map((p, i) => (
+        <mesh key={i} position={p as [number, number, number]}>
+          <boxGeometry args={[0.04, 0.04, 0.06]} />
+          <meshStandardMaterial color="#8a919c" metalness={0.5} roughness={0.4} />
+        </mesh>
+      ))}
+      <mesh position={[0.24, 0, 0.55]}>
+        <sphereGeometry args={[0.025, 8, 8]} />
+        <meshBasicMaterial color="#d07070" />
+      </mesh>
+      <mesh position={[-0.24, 0, 0.55]}>
+        <sphereGeometry args={[0.025, 8, 8]} />
+        <meshBasicMaterial color="#70b080" />
+      </mesh>
+      {showAxes && <AxisTriplet scale={1.6} />}
+    </group>
+  );
+}
+
+function Probe({ sample }: { sample: CislunarSample }) {
+  const p = craftVisual(sample);
+  const v = vec3(sample.v);
+  const vDir = v.lengthSq() > 1e-10 ? v.clone().normalize() : new THREE.Vector3(0, 0, 1);
+  const vTip: [number, number, number] = [vDir.x * 2.4, vDir.y * 2.4, vDir.z * 2.4];
+  return (
+    <group position={p}>
+      <CraftModel sample={sample} scale={1.15} />
+      <Line points={[[0, 0, 0], vTip]} color="#c4a574" lineWidth={2} />
     </group>
   );
 }
@@ -114,7 +295,7 @@ function Trajectory({ mission }: { mission: CislunarMission }) {
         cur = s.phase;
         pts = [];
       }
-      pts.push([s.r[0] * KM_TO_SCENE, s.r[1] * KM_TO_SCENE, s.r[2] * KM_TO_SCENE]);
+      pts.push(craftVisual(s).toArray() as [number, number, number]);
     }
     if (cur && pts.length > 1) byPhase.push({ phase: cur, pts });
     return byPhase;
@@ -122,7 +303,7 @@ function Trajectory({ mission }: { mission: CislunarMission }) {
   return (
     <group>
       {segments.map((seg, i) => (
-        <Line key={i} points={seg.pts} color={PHASE_COLOR[seg.phase]} lineWidth={1.4} transparent opacity={0.85} />
+        <Line key={i} points={seg.pts} color={PHASE_COLOR[seg.phase]} lineWidth={2.2} transparent opacity={0.92} />
       ))}
     </group>
   );
@@ -130,8 +311,8 @@ function Trajectory({ mission }: { mission: CislunarMission }) {
 
 function MoonOrbit() {
   const pts = useMemo(() => {
-    const n = 96;
-    const r = 384400 * KM_TO_SCENE;
+    const n = 128;
+    const r = VIS_MOON_DIST;
     const out: [number, number, number][] = [];
     for (let i = 0; i <= n; i++) {
       const th = (i / n) * Math.PI * 2;
@@ -139,104 +320,80 @@ function MoonOrbit() {
     }
     return out;
   }, []);
-  return <Line points={pts} color="#6d7686" lineWidth={0.6} transparent opacity={0.35} />;
+  return <Line points={pts} color="#6d7686" lineWidth={1} transparent opacity={0.4} />;
 }
 
-function liftOutside(p: THREE.Vector3, center: THREE.Vector3, radius: number, pad: number): THREE.Vector3 {
-  const d = p.clone().sub(center);
-  const need = radius + pad;
-  if (d.length() < 1e-6) return center.clone().add(new THREE.Vector3(0, need, 0));
-  if (d.length() < need) d.setLength(need);
-  return center.clone().add(d);
+function modeFraming(mode: CameraMode, sample: CislunarSample): { target: THREE.Vector3; position: THREE.Vector3 } {
+  const craft = craftVisual(sample);
+  const moon = moonVisual(sample.moon);
+  if (mode === "earth") {
+    return {
+      target: ORIGIN.clone(),
+      position: new THREE.Vector3(VIS_EARTH_R * 2.4, VIS_EARTH_R * 1.15, VIS_EARTH_R * 2.1),
+    };
+  }
+  if (mode === "moon") {
+    const away = moon.clone().normalize();
+    return {
+      target: moon.clone(),
+      position: moon.clone().add(away.multiplyScalar(VIS_MOON_R * 4.6)).add(new THREE.Vector3(0, VIS_MOON_R * 2.0, 0)),
+    };
+  }
+  if (mode === "craft") {
+    const v = vec3(sample.v);
+    if (v.lengthSq() < 1e-10) v.set(0, 0, 1);
+    else v.normalize();
+    return {
+      target: craft.clone(),
+      position: craft.clone().add(v.multiplyScalar(-5.4)).add(new THREE.Vector3(0, 2.2, 1.6)),
+    };
+  }
+  const mid = moon.clone().multiplyScalar(0.46);
+  return {
+    target: mid,
+    position: mid.clone().add(new THREE.Vector3(18, 110, 200)),
+  };
 }
 
-function MissionCamera({
+function CameraRig({
   sample,
   mode,
+  offset,
 }: {
   sample: CislunarSample;
   mode: CameraMode;
+  offset: MutableRefObject<THREE.Vector3>;
 }) {
-  const look = useRef(new THREE.Vector3());
-  const primed = useRef(false);
-  useFrame(({ camera }, dt) => {
-    if (mode === "free") return;
-    const d = Math.min(dt, 0.1);
-    const craft = toScene(sample.r);
-    const moon = toScene(sample.moon);
-    const earth = new THREE.Vector3(0, 0, 0);
-    const rE = R_EARTH * KM_TO_SCENE;
-    const rM = R_MOON * KM_TO_SCENE;
-    let desired: THREE.Vector3;
-    let target: THREE.Vector3;
-    if (mode === "earth") {
-      desired = new THREE.Vector3(rE * 2.6, rE * 1.1, rE * 2.2);
-      target = earth.clone();
-    } else if (mode === "moon") {
-      const away = moon.clone().normalize();
-      desired = moon.clone().add(away.multiplyScalar(rM * 4.5)).add(new THREE.Vector3(0, rM * 1.6, 0));
-      target = moon.clone();
-    } else if (mode === "overview") {
-      const mid = moon.clone().multiplyScalar(0.5);
-      desired = mid.clone().add(new THREE.Vector3(30, 560, 700));
-      target = mid.clone();
-    } else if (mode === "follow") {
-      const v = toScene(sample.v);
-      if (v.lengthSq() < 1e-10) v.set(0, 0, 1);
-      else v.normalize();
-      const near = sample.phase === "llo" || sample.phase === "leo" || sample.phase === "tli";
-      const dist = near ? 1.6 : 18;
-      desired = craft.clone().add(v.multiplyScalar(-dist)).add(new THREE.Vector3(0, dist * 0.35, 0));
-      target = craft.clone();
-    } else if (sample.phase === "leo" || sample.phase === "tli") {
-      const sun = new THREE.Vector3(1.6, 0.7, 0.4).normalize();
-      desired = craft.clone().add(sun.multiplyScalar(2.4)).add(new THREE.Vector3(0, 0.9, 0));
-      target = earth.clone().lerp(craft, 0.08);
-    } else if (sample.phase === "coast") {
-      const u = Math.min(1, Math.max(0, sample.altEarth / 3.7e5));
-      if (u < 0.18) {
-        const radial = craft.clone().normalize();
-        desired = craft.clone().add(radial.multiplyScalar(4)).add(new THREE.Vector3(0, 2.5, 6));
-        target = earth.clone();
-      } else if (u < 0.72) {
-        const mid = moon.clone().multiplyScalar(0.5);
-        desired = mid.clone().add(new THREE.Vector3(40, 520, 640));
-        target = mid.clone();
-      } else {
-        const away = craft.clone().sub(moon);
-        if (away.lengthSq() < 1e-8) away.set(0, 0, 1);
-        else away.normalize();
-        desired = craft.clone().add(away.multiplyScalar(8)).add(new THREE.Vector3(0, 4, 0));
-        target = moon.clone().lerp(craft, 0.25);
-      }
-    } else {
-      const away = craft.clone().sub(moon);
-      if (away.lengthSq() < 1e-8) away.set(0, 0, 1);
-      else away.normalize();
-      desired = craft.clone().add(away.multiplyScalar(2.4)).add(new THREE.Vector3(0, 1.1, 0));
-      target = moon.clone().lerp(craft, 0.4);
+  const { camera, controls } = useThree();
+  const lastMode = useRef<CameraMode | null>(null);
+  const snap = useRef(1);
+  const craftFollow = mode === "craft";
+
+  useFrame((_, dt) => {
+    const ctrl = controls as OrbitControlsImpl | null;
+    if (!ctrl) return;
+    const frame = modeFraming(mode, sample);
+    if (lastMode.current !== mode) {
+      lastMode.current = mode;
+      snap.current = 1;
+      offset.current.copy(frame.position).sub(frame.target);
     }
-    const body = sample.phase === "llo" || sample.phase === "loi" ? moon : earth;
-    const rad = sample.phase === "llo" || sample.phase === "loi" ? rM : rE;
-    desired = liftOutside(desired, body, rad, 0.8);
-    desired = liftOutside(desired, sample.phase === "llo" ? earth : moon, sample.phase === "llo" ? rE : rM, 0.5);
-    const k = primed.current ? 1 - Math.exp(-2.4 * d) : 1;
-    primed.current = true;
-    camera.position.lerp(desired, k);
-    look.current.lerp(target, k);
-    camera.lookAt(look.current);
-    camera.near = 0.05;
-    camera.far = 8000;
+    const d = Math.min(dt, 0.08);
+    if (snap.current > 0) {
+      snap.current = Math.max(0, snap.current - d * 1.15);
+      const k = 1 - Math.exp(-3.4 * d);
+      camera.position.lerp(frame.position, k);
+      ctrl.target.lerp(frame.target, k);
+      ctrl.update();
+      offset.current.copy(camera.position).sub(ctrl.target);
+    } else if (craftFollow) {
+      ctrl.target.copy(frame.target);
+      camera.position.copy(frame.target).add(offset.current);
+      ctrl.update();
+    }
+    camera.near = 0.08;
+    camera.far = 2500;
     camera.updateProjectionMatrix();
-    const w = window as unknown as { __cislunar?: Record<string, unknown> };
-    w.__cislunar = {
-      pos: camera.position.toArray(),
-      look: look.current.toArray(),
-      craft: craft.toArray(),
-      moon: moon.toArray(),
-      mode,
-      phase: sample.phase,
-    };
   });
   return null;
 }
@@ -250,21 +407,49 @@ function SceneBody({
   sample: CislunarSample;
   mode: CameraMode;
 }) {
-  const moonPos = toScene(sample.moon);
+  const moonPos = moonVisual(sample.moon);
+  const craftPos = craftVisual(sample);
+  const controlsRef = useRef<OrbitControlsImpl>(null);
+  const offset = useRef(new THREE.Vector3());
+
   return (
     <>
       <color attach="background" args={["#07080c"]} />
-      <ambientLight intensity={0.55} />
-      <hemisphereLight args={["#c5d6ea", "#2a241c", 0.7]} />
-      <directionalLight position={[420, 180, 90]} intensity={3.2} color="#fff7ea" />
+      <ambientLight intensity={0.42} />
+      <hemisphereLight args={["#c5d6ea", "#2a241c", 0.65]} />
+      <directionalLight position={[420, 180, 90]} intensity={2.6} color="#fff7ea" />
+      <directionalLight position={[-80, 40, -120]} intensity={0.25} color="#8aa4c8" />
       <Stars />
+      <gridHelper args={[720, 18, "#1c2230", "#12161f"]} />
       <Earth />
       <Moon pos={moonPos} />
       <MoonOrbit />
       <Trajectory mission={mission} />
       <Probe sample={sample} />
-      <MissionCamera key={mode} sample={sample} mode={mode} />
-      {mode === "free" ? <OrbitControls enableDamping makeDefault /> : null}
+      <CraftBeacon position={craftPos} />
+      <CameraRig sample={sample} mode={mode} offset={offset} />
+      <OrbitControls
+        ref={controlsRef}
+        makeDefault
+        enableDamping
+        dampingFactor={0.08}
+        minDistance={3.2}
+        maxDistance={900}
+        zoomSpeed={1.15}
+        rotateSpeed={0.72}
+        panSpeed={0.55}
+        enablePan
+        onStart={() => {
+          const ctrl = controlsRef.current;
+          if (!ctrl) return;
+          offset.current.copy(ctrl.object.position).sub(ctrl.target);
+        }}
+        onChange={() => {
+          const ctrl = controlsRef.current;
+          if (!ctrl) return;
+          offset.current.copy(ctrl.object.position).sub(ctrl.target);
+        }}
+      />
     </>
   );
 }
@@ -281,10 +466,31 @@ export function CislunarCanvas({
   return (
     <Canvas
       dpr={[1, 2]}
-      gl={{ antialias: true, alpha: false, preserveDrawingBuffer: true }}
-      camera={{ position: [0, 8, 40], fov: 50, near: 0.1, far: 8000 }}
+      gl={{ antialias: true, alpha: false, preserveDrawingBuffer: true, powerPreference: "high-performance" }}
+      camera={{ position: [150, 120, 220], fov: 46, near: 0.1, far: 2500 }}
+      style={{ width: "100%", height: "100%", background: "#07080c", touchAction: "none" }}
     >
       <SceneBody mission={mission} sample={sample} mode={mode} />
+    </Canvas>
+  );
+}
+
+export function CraftInsetCanvas({ sample }: { sample: CislunarSample }) {
+  return (
+    <Canvas
+      dpr={[1, 2]}
+      gl={{ antialias: true, alpha: false, preserveDrawingBuffer: true, powerPreference: "high-performance" }}
+      camera={{ position: [2.8, 1.7, 3.4], fov: 42, near: 0.1, far: 40 }}
+      style={{ width: "100%", height: "100%", background: "#07080c", touchAction: "none" }}
+    >
+      <color attach="background" args={["#07080c"]} />
+      <ambientLight intensity={0.55} />
+      <hemisphereLight args={["#cfd6e2", "#1a1d24", 0.7]} />
+      <directionalLight position={[6, 8, 5]} intensity={1.8} />
+      <directionalLight position={[-5, -3, -6]} intensity={0.45} />
+      <gridHelper args={[10, 10, "#1c2230", "#12161f"]} />
+      <CraftModel sample={sample} scale={1.35} />
+      <OrbitControls enableDamping dampingFactor={0.08} minDistance={2.2} maxDistance={12} />
     </Canvas>
   );
 }

@@ -3,7 +3,7 @@ import { Link } from "@tanstack/react-router";
 import { Pause, Play, RotateCcw, SkipForward } from "lucide-react";
 import { PHASE_LABEL, type Phase } from "../../domains/cislunar/constants";
 import { buildCislunarMission, sampleAt } from "../../domains/cislunar/trajectory";
-import { CislunarCanvas } from "@/viz/CislunarCanvas";
+import { CislunarCanvas, CraftInset } from "@/viz/CislunarCanvas";
 import type { CameraMode } from "@/viz/cislunar-types";
 
 const AUTO_WARP: Record<Phase, number> = {
@@ -75,12 +75,10 @@ function Btn({
 }
 
 const CAMERAS: { id: CameraMode; label: string }[] = [
-  { id: "cinematic", label: "Cinematic" },
-  { id: "follow", label: "Follow" },
+  { id: "overview", label: "System" },
   { id: "earth", label: "Earth" },
   { id: "moon", label: "Moon" },
-  { id: "overview", label: "Overview" },
-  { id: "free", label: "Free" },
+  { id: "craft", label: "Craft" },
 ];
 
 export function CislunarApp() {
@@ -89,7 +87,7 @@ export function CislunarApp() {
   const [playing, setPlaying] = useState(false);
   const [warp, setWarp] = useState<number | "auto">("auto");
   const [t, setT] = useState(0);
-  const [mode, setMode] = useState<CameraMode>("cinematic");
+  const [mode, setMode] = useState<CameraMode>("earth");
 
   useEffect(() => {
     if (!playing || briefing) return;
@@ -153,17 +151,29 @@ export function CislunarApp() {
           <CislunarCanvas mission={mission} sample={sample} mode={mode} />
         </div>
 
+        <div className="pointer-events-none absolute right-3 top-3 z-10 w-40 sm:w-52">
+          <div className="pointer-events-auto overflow-hidden rounded-xl bg-bg-elevated/90 shadow-[var(--shadow-border)] backdrop-blur-sm">
+            <div className="h-40 sm:h-52">
+              <CraftInset sample={sample} />
+            </div>
+            <div className="px-2 py-1.5 text-center text-2xs uppercase tracking-[0.14em] text-fg-subtle">
+              Attitude · drag / pinch
+            </div>
+          </div>
+        </div>
+
         {briefing && (
-          <div className="absolute inset-0 flex items-end bg-overlay p-5 sm:items-center sm:justify-center">
-            <div className="w-full max-w-lg rounded-xl bg-bg-elevated p-5 shadow-[var(--shadow-border)] sm:p-6">
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 flex items-end p-4 sm:inset-0 sm:items-center sm:justify-center">
+            <div className="pointer-events-auto w-full max-w-lg rounded-xl bg-bg-elevated/95 p-5 shadow-[var(--shadow-border)] sm:p-6">
               <div className="text-2xs font-medium uppercase tracking-[0.18em] text-fg-subtle">
                 Patched-conic visualization
               </div>
               <h2 className="mt-1 text-2xl font-semibold tracking-tight">Earth to lunar orbit</h2>
               <p className="mt-3 text-sm leading-relaxed text-fg-muted">
-                A 300 km LEO parking orbit, a trans-lunar injection, a multi-day coast, then capture
-                into a 100 km lunar orbit. Distances and speeds are physical. This is a visualization,
-                not the AETHER attitude plant.
+                Drag to orbit, scroll or pinch to zoom. System view shows the whole transfer.
+                Craft view and the inset show the probe with body axes (red radial, green
+                normal, blue prograde). HUD speeds and altitudes are physical; the 3D layout
+                is enlarged so Earth, Moon and the vehicle are all readable.
               </p>
               <ul className="mt-4 space-y-1.5 font-mono text-xs text-fg-muted">
                 <li>TLI Δv ≈ {mission.dvTli.toFixed(2)} km/s</li>
@@ -221,12 +231,15 @@ export function CislunarApp() {
                   </Btn>
                 ))}
               </div>
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 {CAMERAS.map((c) => (
                   <Btn key={c.id} onClick={() => setMode(c.id)} active={mode === c.id}>
                     {c.label}
                   </Btn>
                 ))}
+                <span className="px-1 text-2xs uppercase tracking-[0.12em] text-fg-subtle">
+                  drag · scroll to zoom
+                </span>
               </div>
             </div>
           </div>
