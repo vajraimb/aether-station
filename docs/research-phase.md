@@ -75,3 +75,6 @@ Failures are `search_unreached_under_budget` or `online_gate_fail`, not proofs o
 - No UI retune
 
 Hardware co-design (`research/actuator-codesign`) is a **new** question: minimal plant change that makes train-10 reachable. It is not opened here.
+
+Cross-domain check: `domain/inventory-validation` (`docs/cross-domain.md`). AgentArena core files unchanged. Inventory policy FAIL. SimCore still deferred.
+
