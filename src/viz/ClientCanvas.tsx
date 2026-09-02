@@ -1,9 +1,8 @@
 import { useEffect, useState, type ComponentType } from "react";
-import type { Sample } from "@/sim/types";
-import type { ViewOpts } from "./types";
+import type { SceneSample, ViewOpts } from "./types";
 
 type Props = {
-  sample: Sample;
+  sample: SceneSample;
   opts: ViewOpts;
   trail: [number, number, number][];
 };

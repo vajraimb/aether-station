@@ -4,3 +4,4 @@
 @import "../src/styles.css";
 @source "../src/components/challenge-v3";
 @source "../src/lib/challenge-v3";
+@source "../src/viz";

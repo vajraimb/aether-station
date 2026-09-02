@@ -4,10 +4,9 @@ import { OrbitControls, Line } from "@react-three/drei";
 import * as THREE from "three";
 import { THRUSTERS } from "@/sim/constants";
 import { pendulumPos } from "@/sim/dynamics";
-import type { Sample } from "@/sim/types";
-import type { ViewOpts } from "./types";
+import type { SceneSample, ViewOpts } from "./types";
 
-export type { ViewOpts };
+export type { SceneSample, ViewOpts };
 
 function Stars() {
   const geom = useMemo(() => {
@@ -89,7 +88,7 @@ function ThrusterMesh({
   );
 }
 
-function StationBody({ sample, opts, trail }: { sample: Sample; opts: ViewOpts; trail: [number, number, number][] }) {
+function StationBody({ sample, opts, trail }: { sample: SceneSample; opts: ViewOpts; trail: [number, number, number][] }) {
   const q = sample.q;
   const quat = new THREE.Quaternion(q[1], q[2], q[3], q[0]);
   const r1 = pendulumPos(sample.th1, 1, 1.25);
@@ -167,7 +166,7 @@ export function StationCanvas({
   opts,
   trail,
 }: {
-  sample: Sample;
+  sample: SceneSample;
   opts: ViewOpts;
   trail: [number, number, number][];
 }) {

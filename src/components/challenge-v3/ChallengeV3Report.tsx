@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import {
   ArrowLeft,
   Ban,
+  Box,
   CircleAlert,
   Hash,
   Minus,
@@ -640,7 +641,24 @@ function Convergence() {
 
 /* ------------------------------------------------------------------- page */
 
-export function ChallengeV3Report() {
+/**
+ * Where the header links point. The router app uses paths; the standalone
+ * bundle has no router and passes hash targets instead, so the same component
+ * ships in both without a second copy of the header.
+ */
+export interface PageLinks {
+  home: string;
+  report: string;
+  replay: string;
+}
+
+export const DEFAULT_LINKS: PageLinks = {
+  home: "/",
+  report: "/challenge-v3",
+  replay: "/challenge-v3/replay",
+};
+
+export function ChallengeV3Report({ links = DEFAULT_LINKS }: { links?: PageLinks } = {}) {
   const [cfgIdx, setCfgIdx] = useState(configs.findIndex((c) => c.retained));
   const [seed, setSeed] = useState<number | null>(null);
   const config = configs[cfgIdx] ?? canonical;
@@ -653,11 +671,18 @@ export function ChallengeV3Report() {
             {/* A plain anchor, not a router Link: this component is also mounted
                 by the standalone report bundle, which has no router. */}
             <a
-              href="/"
+              href={links.home}
               className="inline-flex items-center gap-1.5 rounded-sm bg-bg-subtle px-2.5 py-1.5 text-2xs uppercase tracking-[0.12em] text-fg-muted transition-colors hover:text-fg"
             >
               <ArrowLeft size={12} strokeWidth={2.4} />
               任务控制台
+            </a>
+            <a
+              href={links.replay}
+              className="inline-flex items-center gap-1.5 rounded-sm bg-bg-subtle px-2.5 py-1.5 text-2xs uppercase tracking-[0.12em] text-fg-muted transition-colors hover:text-fg"
+            >
+              <Box size={12} strokeWidth={2.4} />
+              三维回放
             </a>
             <div className="font-mono text-xs text-fg-subtle">
               AETHER · Challenge V3 · 真值态 L2

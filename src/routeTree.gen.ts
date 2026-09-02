@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ChallengeV3RouteImport } from './routes/challenge-v3'
+import { Route as ChallengeV3ReplayRouteImport } from './routes/challenge-v3_.replay'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -22,31 +23,40 @@ const ChallengeV3Route = ChallengeV3RouteImport.update({
   path: '/challenge-v3',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ChallengeV3ReplayRoute = ChallengeV3ReplayRouteImport.update({
+  id: '/challenge-v3_/replay',
+  path: '/challenge-v3/replay',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/challenge-v3': typeof ChallengeV3Route
+  '/challenge-v3/replay': typeof ChallengeV3ReplayRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/challenge-v3': typeof ChallengeV3Route
+  '/challenge-v3/replay': typeof ChallengeV3ReplayRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/challenge-v3': typeof ChallengeV3Route
+  '/challenge-v3_/replay': typeof ChallengeV3ReplayRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/challenge-v3'
+  fullPaths: '/' | '/challenge-v3' | '/challenge-v3/replay'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/challenge-v3'
-  id: '__root__' | '/' | '/challenge-v3'
+  to: '/' | '/challenge-v3' | '/challenge-v3/replay'
+  id: '__root__' | '/' | '/challenge-v3' | '/challenge-v3_/replay'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ChallengeV3Route: typeof ChallengeV3Route
+  ChallengeV3ReplayRoute: typeof ChallengeV3ReplayRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -65,12 +75,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ChallengeV3RouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/challenge-v3_/replay': {
+      id: '/challenge-v3_/replay'
+      path: '/challenge-v3/replay'
+      fullPath: '/challenge-v3/replay'
+      preLoaderRoute: typeof ChallengeV3ReplayRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ChallengeV3Route: ChallengeV3Route,
+  ChallengeV3ReplayRoute: ChallengeV3ReplayRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
