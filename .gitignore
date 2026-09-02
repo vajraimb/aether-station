@@ -54,3 +54,6 @@ outputs/runs/**/eval.json
 .idea/
 .vscode/
 *.swp
+
+# Output of the standalone Challenge V3 report bundle.
+standalone/dist

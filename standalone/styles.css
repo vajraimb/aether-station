@@ -1,0 +1,6 @@
+/* The app's stylesheet plus an explicit source root: Tailwind's automatic
+   content detection starts at the Vite root, which for this bundle is
+   standalone/, so the component's classes in src/ must be declared. */
+@import "../src/styles.css";
+@source "../src/components/challenge-v3";
+@source "../src/lib/challenge-v3";

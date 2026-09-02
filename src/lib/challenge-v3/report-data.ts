@@ -225,7 +225,7 @@ export const gateRows = [
   {
     key: "rate",
     label: "终端角速度",
-    detail: "‖ω‖ < 0.008 rad/s",
+    detail: "角速度模 < 0.008 rad/s",
     measured: gate.measured.rate_pass_rate,
     required: gate.required.rate_pass_rate,
   },

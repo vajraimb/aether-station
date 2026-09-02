@@ -1,5 +1,4 @@
 import { useMemo, useState } from "react";
-import { Link } from "@tanstack/react-router";
 import {
   ArrowLeft,
   Ban,
@@ -301,7 +300,7 @@ function SeedBars({ config }: { config: Config }) {
                   >
                     {deg(r.final_attitude_error_deg)}
                     <span className="ml-2 hidden text-fg-subtle group-hover:inline">
-                      ω {sci(r.final_angular_speed_rad_s)} · 燃料 {r.remaining_fuel_kg.toFixed(2)}{" "}
+                      角速度 {sci(r.final_angular_speed_rad_s)} · 燃料 {r.remaining_fuel_kg.toFixed(2)}{" "}
                       kg · 重规划 {r.replans} · rollout {r.rollouts.toLocaleString()}
                     </span>
                   </div>
@@ -651,13 +650,15 @@ export function ChallengeV3Report() {
       <header className="sticky top-0 z-10 border-b border-border bg-overlay backdrop-blur-md">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
           <div className="flex items-center gap-3">
-            <Link
-              to="/"
+            {/* A plain anchor, not a router Link: this component is also mounted
+                by the standalone report bundle, which has no router. */}
+            <a
+              href="/"
               className="inline-flex items-center gap-1.5 rounded-sm bg-bg-subtle px-2.5 py-1.5 text-2xs uppercase tracking-[0.12em] text-fg-muted transition-colors hover:text-fg"
             >
               <ArrowLeft size={12} strokeWidth={2.4} />
               任务控制台
-            </Link>
+            </a>
             <div className="font-mono text-xs text-fg-subtle">
               AETHER · Challenge V3 · 真值态 L2
             </div>
