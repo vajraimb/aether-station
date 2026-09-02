@@ -274,7 +274,7 @@ export function CislunarApp() {
     <main className="flex min-h-dvh flex-col bg-bg text-fg">
       <header className="flex flex-wrap items-center gap-3 border-b border-border px-4 py-3">
         <div className="min-w-0 flex-1">
-          <div className="text-2xs font-medium uppercase tracking-[0.22em] text-fg-subtle">Deep space flight</div>
+          <div className="text-2xs font-medium uppercase tracking-[0.22em] text-fg-subtle">AETHER Flight</div>
           <h1 className="font-display text-xl font-semibold tracking-tight">Earth → Moon → Mars</h1>
         </div>
         <nav className="flex gap-1">
@@ -285,7 +285,7 @@ export function CislunarApp() {
             Station
           </Link>
           <span className="inline-flex h-11 items-center rounded-lg bg-bg-subtle px-3 text-sm text-fg shadow-[var(--shadow-border)]">
-            Cislunar
+            Flight
           </span>
         </nav>
       </header>

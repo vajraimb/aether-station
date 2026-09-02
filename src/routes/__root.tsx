@@ -3,7 +3,7 @@ import { AuthProvider } from "@/lib/auth/provider";
 import { PreviewHostBridge } from "@/components/preview-host-bridge";
 import appCss from "../styles.css?url";
 
-const APP_NAME = "AETHER";
+const APP_NAME = "AETHER Flight";
 
 export const Route = createRootRoute({
   head: () => ({
@@ -14,7 +14,8 @@ export const Route = createRootRoute({
       { name: "theme-color", content: "#07080c" },
       {
         name: "description",
-        content: "AETHER — failed space-station attitude recovery. Six-DOF GNC lab with slosh, a sliding mass, and FDIR.",
+        content:
+          "AETHER Flight — Earth to the Moon to Mars. Patched-conic transfer, lunar orbit, Hohmann coast, and an exaggerated solar spacetime well.",
       },
     ],
     links: [
