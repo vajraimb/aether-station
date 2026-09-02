@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Link } from "@tanstack/react-router";
 import {
   Activity,
+  FileChartColumn,
   FlaskConical,
   Gauge,
   Pause,
@@ -25,7 +27,13 @@ import { generateScenario } from "@/sim/scenario";
 import { Simulator } from "@/sim/simulator";
 import { trajectoryCsv } from "@/sim/scoring";
 import { runAllTests, type TestResult } from "@/sim/tests";
-import { THRUSTER_NAMES, type Metrics, type PrivateScenario, type PublicConfig, type Sample } from "@/sim/types";
+import {
+  THRUSTER_NAMES,
+  type Metrics,
+  type PrivateScenario,
+  type PublicConfig,
+  type Sample,
+} from "@/sim/types";
 
 type Tab = "telemetry" | "estimate" | "fdir" | "model" | "tests" | "report";
 
@@ -80,9 +88,7 @@ function Btn({
       onClick={onClick}
       className={
         "inline-flex h-11 min-w-11 items-center justify-center gap-1.5 rounded-lg px-3 text-sm font-medium transition-colors duration-[var(--motion-quick)] " +
-        (active
-          ? "bg-accent text-accent-fg"
-          : "bg-bg-subtle text-fg hover:bg-bg-hover") +
+        (active ? "bg-accent text-accent-fg" : "bg-bg-subtle text-fg hover:bg-bg-hover") +
         (disabled ? " opacity-40" : "")
       }
     >
@@ -255,17 +261,23 @@ export function MissionApp() {
   if (!sample || !sc) {
     return (
       <main className="flex min-h-dvh flex-col bg-bg px-5 py-8 text-fg">
-        <div className="text-2xs font-medium uppercase tracking-[0.22em] text-fg-subtle">Recovery lab</div>
+        <div className="text-2xs font-medium uppercase tracking-[0.22em] text-fg-subtle">
+          Recovery lab
+        </div>
         <h1 className="mt-1 font-display text-xl font-semibold tracking-tight">AETHER</h1>
-        <h2 className="mt-6 text-2xl font-semibold tracking-tight">Failed station attitude recovery</h2>
+        <h2 className="mt-6 text-2xl font-semibold tracking-tight">
+          Failed station attitude recovery
+        </h2>
         <p className="mt-3 max-w-lg text-sm leading-relaxed text-fg-muted">
-          A tumbling cylindrical station, an internal sliding mass, and a partially filled annular tank.
+          A tumbling cylindrical station, an internal sliding mass, and a partially filled annular
+          tank.
         </p>
       </main>
     );
   }
 
-  const attTone = sample.attitudeErrorDeg < 1 ? "ok" : sample.attitudeErrorDeg < 8 ? "warn" : "fault";
+  const attTone =
+    sample.attitudeErrorDeg < 1 ? "ok" : sample.attitudeErrorDeg < 8 ? "warn" : "fault";
   const wmag = Math.hypot(sample.w[0], sample.w[1], sample.w[2]);
   const tabs: { id: Tab; label: string }[] = [
     { id: "telemetry", label: "Telemetry" },
@@ -291,6 +303,13 @@ export function MissionApp() {
         <div className="font-mono text-xs tabular-nums text-fg-muted">
           T+{fmt(sample.t, 2)} s · seed {seed}
         </div>
+        <Link
+          to="/challenge-v3"
+          className="inline-flex items-center gap-1.5 rounded-sm bg-bg-subtle px-2.5 py-1.5 text-2xs uppercase tracking-[0.12em] text-fg-muted transition-colors hover:text-fg"
+        >
+          <FileChartColumn size={12} strokeWidth={2.4} />
+          Challenge V3 结果
+        </Link>
       </header>
 
       <div className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[minmax(0,1.15fr)_minmax(320px,0.85fr)]">
@@ -304,7 +323,9 @@ export function MissionApp() {
                 <div className="text-2xs font-medium uppercase tracking-[0.18em] text-fg-subtle">
                   AETHER-1 · 180 s recovery
                 </div>
-                <h2 className="mt-1 text-2xl font-semibold tracking-tight">Failed station attitude recovery</h2>
+                <h2 className="mt-1 text-2xl font-semibold tracking-tight">
+                  Failed station attitude recovery
+                </h2>
                 <p className="mt-3 text-sm leading-relaxed text-fg-muted">
                   A tumbling cylindrical station, an internal sliding mass, and a partially filled
                   annular tank. The agent sees only noisy, delayed sensors — never truth, never the
@@ -356,7 +377,11 @@ export function MissionApp() {
             <Chip label="Slosh E" value={fmt(sample.sloshEnergy, 2)} />
             <Chip
               label="FDIR"
-              value={sample.detectedFailedThruster >= 0 ? THRUSTER_NAMES[sample.detectedFailedThruster]! : "nominal"}
+              value={
+                sample.detectedFailedThruster >= 0
+                  ? THRUSTER_NAMES[sample.detectedFailedThruster]!
+                  : "nominal"
+              }
               tone={sample.detectedFailedThruster >= 0 ? "fault" : "ok"}
             />
           </div>
@@ -485,7 +510,11 @@ function MiniChart({
           <XAxis dataKey="t" tick={{ fill: "#6d7686", fontSize: 10 }} stroke="#262a33" />
           <YAxis tick={{ fill: "#6d7686", fontSize: 10 }} stroke="#262a33" width={42} />
           <Tooltip
-            contentStyle={{ background: "#101218", border: "1px solid rgba(232,234,239,0.1)", fontSize: 12 }}
+            contentStyle={{
+              background: "#101218",
+              border: "1px solid rgba(232,234,239,0.1)",
+              fontSize: 12,
+            }}
           />
           {keys.map((k) => (
             <Line
@@ -627,7 +656,17 @@ function EstimatePanel({
   );
 }
 
-function TruthEst({ label, est, truth, p }: { label: string; est: number; truth: number; p: number }) {
+function TruthEst({
+  label,
+  est,
+  truth,
+  p,
+}: {
+  label: string;
+  est: number;
+  truth: number;
+  p: number;
+}) {
   const e = Math.abs(est - truth) / truth;
   return (
     <div className="rounded-lg bg-bg-subtle px-3 py-2">
@@ -670,8 +709,12 @@ function FdirPanel({ sample, sim }: { sample: Sample; sim: Simulator | null }) {
         })}
       </div>
       <div className="grid grid-cols-2 gap-x-3 gap-y-1 font-mono text-2xs text-fg-muted">
-        <div>inject {fdir?.faultInjectionTime != null ? fmt(fdir.faultInjectionTime, 3) + " s" : "—"}</div>
-        <div>abnormal {fdir?.abnormalFlagTime != null ? fmt(fdir.abnormalFlagTime, 3) + " s" : "—"}</div>
+        <div>
+          inject {fdir?.faultInjectionTime != null ? fmt(fdir.faultInjectionTime, 3) + " s" : "—"}
+        </div>
+        <div>
+          abnormal {fdir?.abnormalFlagTime != null ? fmt(fdir.abnormalFlagTime, 3) + " s" : "—"}
+        </div>
         <div>detect {fdir?.detectionTime != null ? fmt(fdir.detectionTime, 3) + " s" : "—"}</div>
         <div>isolate {fdir?.isolationTime != null ? fmt(fdir.isolationTime, 3) + " s" : "—"}</div>
         <div>detΔ {fdir?.detectionDelay != null ? fmt(fdir.detectionDelay, 3) + " s" : "—"}</div>
@@ -687,28 +730,28 @@ function ModelPanel() {
   return (
     <div className="space-y-3 text-sm leading-relaxed text-fg-muted">
       <p>
-        Right-handed frames. Quaternion order [w, x, y, z]. q_BI is the active rotation taking
-        body vectors to inertial: v_I = R(q) v_B. ω is expressed in B.
+        Right-handed frames. Quaternion order [w, x, y, z]. q_BI is the active rotation taking body
+        vectors to inertial: v_I = R(q) v_B. ω is expressed in B.
       </p>
       <p>
         State X = (r_I, v_I, q_BI, ω_B, s, ṡ, θ1, θ̇1, θ2, θ̇2, m_fuel). Inertia I(s, θ) uses the
         parallel-axis theorem; Euler retains İω and relative slosh angular momentum.
       </p>
       <p>
-        Slosh: two equivalent pendulums on the annular tank, L = 1.25 m, equal modal masses
-        0.4 m_fluid so the coupling potential V = I_eq k12 (1 − cos(θ1 − θ2)) is energy-consistent.
+        Slosh: two equivalent pendulums on the annular tank, L = 1.25 m, equal modal masses 0.4
+        m_fluid so the coupling potential V = I_eq k12 (1 − cos(θ1 − θ2)) is energy-consistent.
         Restoring ω_i² sin θ_i is a tank-wall potential, not gravity.
       </p>
       <p>
-        Thrusters: six cold-gas jets, |F| ≤ 18 N, 40 ms minimum pulse, 120 ms command delay, at
-        most two firing. The failed jet is chosen by the scenario generator — the agent must
-        isolate it from current feedback. Terminal pointing uses pulse-density modulation on the
-        remaining reachable set; whether 1° is a plant limit is answered by the oracle in
+        Thrusters: six cold-gas jets, |F| ≤ 18 N, 40 ms minimum pulse, 120 ms command delay, at most
+        two firing. The failed jet is chosen by the scenario generator — the agent must isolate it
+        from current feedback. Terminal pointing uses pulse-density modulation on the remaining
+        reachable set; whether 1° is a plant limit is answered by the oracle in
         outputs/oracle-metrics.json, not by this tab.
       </p>
       <p>
-        Integration: RK4, Δt = 5 ms. Slider impacts use event location (linear interpolation to
-        the bound) and an inelastic impulse e = 0.15, not a clip.
+        Integration: RK4, Δt = 5 ms. Slider impacts use event location (linear interpolation to the
+        bound) and an inelastic impulse e = 0.15, not a clip.
       </p>
     </div>
   );
@@ -726,7 +769,9 @@ function TestsPanel({ tests, onRun }: { tests: TestResult[] | null; onRun: () =>
             <li key={t.name} className="rounded-md bg-bg-subtle px-3 py-2">
               <div className="flex items-center justify-between gap-2">
                 <span className="font-mono text-2xs">{t.name}</span>
-                <span className={t.pass ? "text-ok" : "text-fault"}>{t.pass ? "PASS" : "FAIL"}</span>
+                <span className={t.pass ? "text-ok" : "text-fault"}>
+                  {t.pass ? "PASS" : "FAIL"}
+                </span>
               </div>
               <div className="text-2xs text-fg-muted">{t.detail}</div>
             </li>
@@ -782,7 +827,9 @@ function ReportPanel({
 function Scorecard({ m, title }: { m: Metrics; title: string }) {
   return (
     <div className="rounded-xl bg-bg-subtle p-3">
-      <div className="mb-2 text-xs font-medium uppercase tracking-wider text-fg-subtle">{title}</div>
+      <div className="mb-2 text-xs font-medium uppercase tracking-wider text-fg-subtle">
+        {title}
+      </div>
       <ul className="space-y-1">
         {Object.entries(m.scorecard).map(([k, v]) => (
           <li key={k} className="flex items-baseline justify-between gap-2 font-mono text-2xs">
@@ -798,7 +845,15 @@ function Scorecard({ m, title }: { m: Metrics; title: string }) {
   );
 }
 
-function Section({ title, icon, children }: { title: string; icon?: React.ReactNode; children: React.ReactNode }) {
+function Section({
+  title,
+  icon,
+  children,
+}: {
+  title: string;
+  icon?: React.ReactNode;
+  children: React.ReactNode;
+}) {
   return (
     <section>
       <div className="mb-1 flex items-center gap-2 text-2xs font-medium uppercase tracking-[0.14em] text-fg-subtle">
